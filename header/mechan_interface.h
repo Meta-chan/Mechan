@@ -38,5 +38,3 @@ namespace mechan
 		virtual ~Interface() = 0;
 	};
 }
-
-#define MECHAN_DIR "E:\\Project\\Mechan"

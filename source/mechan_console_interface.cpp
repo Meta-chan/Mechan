@@ -1,4 +1,5 @@
 #include "../header/mechan_console_interface.h"
+#include <stdio.h>
 
 namespace mechan
 {
@@ -14,12 +15,12 @@ namespace mechan
 	};
 }
 
-mechan::Interface *new_console_interface()
+mechan::Interface *mechan::new_console_interface()
 {
 	return new ConsoleInterface;
 }
 
-Interface *mechan::Interface::console_interface;
+mechan::Interface *mechan::console_interface;
 
 mechan::ConsoleInterface::ConsoleInterface()
 {}
@@ -29,19 +30,38 @@ bool mechan::ConsoleInterface::ok() const noexcept
 	return true;
 }
 
-Interface::ID mechan::ConsoleInterface::id() const noexcept
+mechan::Interface::ID mechan::ConsoleInterface::id() const noexcept
 {
-	return Interface::ID::console;
+	return ID::console;
 }
 
 bool mechan::ConsoleInterface::write(const std::string message, Address address)
 {
-	
+	printf("%s", message.c_str());
+	return true;
 }
 
 mechan::Interface::ReadResult mechan::ConsoleInterface::read(unsigned int timeout)
 {
-	
+	if (timeout == 0)
+	{
+		ReadResult result;
+		result.address.chat_id = 0;
+		result.address.user_id = 0;
+		result.address.interface_id = ID::console;
+		result.ok = false;
+		return result;
+	}
+
+	//Dummy! Must be impelemented!
+	ReadResult result;
+	result.address.chat_id = 0;
+	result.address.user_id = 0;
+	result.address.interface_id = ID::console;
+	result.message.reserve(128);
+	result.message.resize(scanf("%s", &result.message[0]));
+	result.ok = true;
+	return result;
 }
 
 mechan::ConsoleInterface::~ConsoleInterface()

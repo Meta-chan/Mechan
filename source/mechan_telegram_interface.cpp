@@ -5,6 +5,7 @@
 #define MECHAN_SECOND_NAME	""
 #define MECHAN_PASSWORD		""
 
+#include "../header/mechan_common.h"
 #include "../header/mechan_telegram_interface.h"
 #include "../header/mechan_console_interface.h"
 #include "../header/mechan_log_interface.h"

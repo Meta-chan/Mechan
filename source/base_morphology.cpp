@@ -92,32 +92,7 @@ void MorphologyParser::_writeword(bool addtobase, unsigned int *maxlength)
 
 		ir::ConstBlock key(count, &word[0]);
 		
-		ir::ec code = _word2group->insert(key, ir::ConstBlock(sizeof(unsigned int), &_groupcount), ir::S2STDatabase::insertmode::insert_not_existing);
-		if (code == ir::ec::ec_key_already_exists)
-		{
-			ir::ConstBlock olddata;
-			_word2group->read(key, &olddata);
-
-			bool match = false;
-			for (unsigned int i = 0; i < olddata.size / sizeof(unsigned int); i ++)
-			{
-				if (*((unsigned int *)olddata.data + i) == _groupcount)
-				{
-					match = true;
-					break;
-				}
-			}
-
-			if (!match)
-			{
-				unsigned int newdatasize = olddata.size + sizeof(unsigned int);
-				void *newdata = malloc(newdatasize);
-				memcpy(newdata, olddata.data, olddata.size);
-				memcpy((char*)newdata + olddata.size, &_groupcount, sizeof(unsigned int));
-				_word2group->insert(key, ir::ConstBlock(newdatasize, newdata));
-				free(newdata);
-			}
-		}
+		
 	}
 	
 	_groupdata.push_back('\0');
@@ -208,53 +183,7 @@ MorphologyParser::~MorphologyParser()
 
 void MorphologyParser::parse()
 {
-	unsigned int count = 0;
-	unsigned int maxlength = 0;
-	fread(&_symbol, sizeof(char), 1, _sourcefile);
-
-	while (!_end)
-	{
-		_skipspace();
-
-		bool deprecated = false;
-		if (_symbol == '*')
-		{
-			deprecated = true;
-			size_t read = fread(&_symbol, sizeof(char), 1, _sourcefile);
-			if (read == 0) _end = true;
-		}
-
-		_skipspace();
-		_writeword(true, &maxlength);
-		_skipspacedelim();
-
-		while (_symbol != '|' && !_end)
-		{
-			_writedescription();
-			_skipspace();
-		}
-
-		if (deprecated) _groupdata.push_back(255);
-		_groupdata.push_back('\0');
-		_skipspacedelim();
-		_writeword(false, nullptr);
-
-		bool endblock;
-		_skipendline(&endblock);
-
-		if (endblock || _end)
-		{
-			ir::ConstBlock newdata(_groupdata.size(), &_groupdata[0]);
-			_group2data->insert(_groupcount, newdata);
-			_groupcount++;
-			_groupdata.resize(0);
-		}
-
-		if ((count & 1023) == 0) printf("%i lines processed\n", count);
-		count++;
-	}
-
-	printf("Max length: %i", maxlength);
+	
 };
 
 int persemorphology()

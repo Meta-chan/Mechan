@@ -1,4 +1,5 @@
 #include "../header/mechan_log_interface.h"
+#include "../header/mechan_common.h"
 
 #include <stdio.h>
 
@@ -7,15 +8,16 @@ namespace mechan
 	class LogInterface : public Interface
 	{
 	private:
-		File *_file;
+		FILE *_file;
 		
 	public:
 		LogInterface();
 		bool ok() const noexcept;
 		Interface::ID id() const noexcept;
 		bool write(const std::string message, Address address);
+		ReadResult read(unsigned int timeout);
 		~LogInterface();
-	} *log_interface;
+	};
 }
 
 mechan::Interface *mechan::new_log_interface()
@@ -23,19 +25,19 @@ mechan::Interface *mechan::new_log_interface()
 	return new LogInterface;
 }
 
-mechan::Interface *mechan::log_intreface;
+mechan::Interface *mechan::log_interface;
 	
 mechan::LogInterface::LogInterface()
 {
-	_file = fopen(MECHAN_DIR "\\log.txt", "w");
+	_file = _wfopen(WIDE_MECHAN_DIR "\\log.txt", L"w");
 }
 
-bool mechan::LogInterface::ok()
+bool mechan::LogInterface::ok() const noexcept
 {
 	return (_file != nullptr);
 }
 
-mechan::Interface::ID mechan::LogInterface::id()
+mechan::Interface::ID mechan::LogInterface::id() const noexcept
 {
 	return ID::log;
 }
@@ -43,6 +45,14 @@ mechan::Interface::ID mechan::LogInterface::id()
 bool mechan::LogInterface::write(const std::string message, Address address)
 {
 	return (fwrite(message.c_str(), message.size(), 1, _file) != 0);
+}
+
+mechan::Interface::ReadResult mechan::LogInterface::read(unsigned int timeout)
+{
+	ReadResult result;
+	result.ok = false;
+	result.address.interface_id = ID::log;
+	return result;
 }
 
 mechan::LogInterface::~LogInterface()
