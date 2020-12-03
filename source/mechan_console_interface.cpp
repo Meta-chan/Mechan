@@ -6,12 +6,12 @@ namespace mechan
 	class ConsoleInterface : public Interface
 	{
 	public:
-		ConsoleInterface();
-		bool ok() const noexcept;
-		Interface::ID id() const noexcept;
-		bool write(const std::string message, Address address);
-		ReadResult read(unsigned int timeout);
-		~ConsoleInterface();
+		ConsoleInterface()										noexcept;
+		bool ok()												const noexcept;
+		Interface::ID id()										const noexcept;
+		bool write(const std::string message, Address address)	noexcept;
+		ReadResult read(unsigned int timeout)					noexcept;
+		~ConsoleInterface()										noexcept;
 	};
 }
 
@@ -20,9 +20,7 @@ mechan::Interface *mechan::new_console_interface()
 	return new ConsoleInterface;
 }
 
-mechan::Interface *mechan::console_interface;
-
-mechan::ConsoleInterface::ConsoleInterface()
+mechan::ConsoleInterface::ConsoleInterface() noexcept
 {}
 
 bool mechan::ConsoleInterface::ok() const noexcept
@@ -35,13 +33,13 @@ mechan::Interface::ID mechan::ConsoleInterface::id() const noexcept
 	return ID::console;
 }
 
-bool mechan::ConsoleInterface::write(const std::string message, Address address)
+bool mechan::ConsoleInterface::write(const std::string message, Address address) noexcept
 {
 	printf("%s", message.c_str());
 	return true;
 }
 
-mechan::Interface::ReadResult mechan::ConsoleInterface::read(unsigned int timeout)
+mechan::Interface::ReadResult mechan::ConsoleInterface::read(unsigned int timeout) noexcept
 {
 	if (timeout == 0)
 	{
@@ -64,7 +62,6 @@ mechan::Interface::ReadResult mechan::ConsoleInterface::read(unsigned int timeou
 	return result;
 }
 
-mechan::ConsoleInterface::~ConsoleInterface()
+mechan::ConsoleInterface::~ConsoleInterface() noexcept
 {
-	
 }

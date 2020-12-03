@@ -1,15 +1,17 @@
 #include "../header/mechan_lowercase.h"
 
-void mechan::lowercase(char *string)
+std::string mechan::lowercase(const std::string string)
 {
-	while (*string != '\0')
+	std::string s = string;
+	for (size_t i = 0; i < s.size(); i++)
 	{
-		if (*string >= 'A' && *string <= 'Z') *string = *string + 'a' - 'A';					//A - Z
-		else if (*string >= 0xC0 && *string <= 0xDF) *string = *string + (char)(0xE0 - 0xC0);	//À - ß
-		else if (*string == 0xA8 || *string == 0xB8) *string = (char)0xE5;						//¨
-		else if (*string == 0xAA) *string = (char)0xBA;											//ª
-		else if (*string == 0xAF) *string = (char)0xBF;											//¯
-		else if (*string == 0xB2) *string = (char)0xB3;											//²
-		else if (*string == 0xA5) *string = (char)0xB4;											//Ã
+		if (s[i] >= 'A' && s[i] <= 'Z') s[i] = s[i] + 'a' - 'A';					//A - Z
+		else if (s[i] >= 0xC0 && s[i] <= 0xDF) s[i] = s[i] + (char)(0xE0 - 0xC0);	//À - ß
+		else if (s[i] == 0xA8 || s[i] == 0xB8) s[i] = (char)0xE5;					//¨
+		else if (s[i] == 0xAA) s[i] = (char)0xBA;									//ª
+		else if (s[i] == 0xAF) s[i] = (char)0xBF;									//¯
+		else if (s[i] == 0xB2) s[i] = (char)0xB3;									//²
+		else if (s[i] == 0xA5) s[i] = (char)0xB4;									//Ã
 	}
+	return s;
 }

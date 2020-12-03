@@ -5,5 +5,4 @@
 namespace mechan
 {
 	Interface *new_log_interface();
-	extern Interface *log_interface;
 }

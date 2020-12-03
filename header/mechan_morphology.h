@@ -170,8 +170,9 @@ namespace mechan
 		
 	public:
 		Morphology();
-		void word_info(const char *lowercase_word, std::vector<unsigned int> *groups);
-		void group_info(unsigned int group, std::vector<GroupItem> *data);
+		bool ok() const noexcept;
+		void word_info(const std::string lowercase_word, std::vector<unsigned int> *groups) const noexcept;
+		void group_info(unsigned int group, std::vector<GroupItem> *data) const noexcept;
 		~Morphology();
 	};
 }

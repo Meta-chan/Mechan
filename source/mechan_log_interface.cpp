@@ -1,5 +1,5 @@
 #include "../header/mechan_log_interface.h"
-#include "../header/mechan_common.h"
+#include "../header/mechan_directory.h"
 
 #include <stdio.h>
 
@@ -11,12 +11,12 @@ namespace mechan
 		FILE *_file;
 		
 	public:
-		LogInterface();
-		bool ok() const noexcept;
-		Interface::ID id() const noexcept;
-		bool write(const std::string message, Address address);
-		ReadResult read(unsigned int timeout);
-		~LogInterface();
+		LogInterface()											noexcept;
+		bool ok()												const noexcept;
+		Interface::ID id()										const noexcept;
+		bool write(const std::string message, Address address)	noexcept;
+		ReadResult read(unsigned int timeout)					noexcept;
+		~LogInterface()											noexcept;
 	};
 }
 
@@ -24,8 +24,6 @@ mechan::Interface *mechan::new_log_interface()
 {
 	return new LogInterface;
 }
-
-mechan::Interface *mechan::log_interface;
 	
 mechan::LogInterface::LogInterface()
 {

@@ -5,5 +5,4 @@
 namespace mechan
 {
 	Interface *new_console_interface();
-	extern Interface *console_interface;
 }

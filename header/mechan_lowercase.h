@@ -1,6 +1,8 @@
 #pragma once
 
+#include <string>
+
 namespace mechan
 {
-	void lowercase(char *string);
+	std::string lowercase(const std::string string);
 }

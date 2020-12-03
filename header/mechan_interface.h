@@ -20,8 +20,8 @@ namespace mechan
 			Interface::ID interface_id;
 			unsigned long long int chat_id;
 			unsigned long long int user_id;
-			Address();
-			Address(Interface::ID interface_id, unsigned long long int chat_id, unsigned long long int user_id);
+			Address() noexcept;
+			Address(Interface::ID interface_id, unsigned long long int chat_id, unsigned long long int user_id) noexcept;
 		};
 		
 		struct ReadResult
@@ -31,10 +31,10 @@ namespace mechan
 			std::string message;
 		};
 		
-		virtual bool ok() const noexcept = 0;
-		virtual Interface::ID id() const noexcept = 0;
-		virtual bool write(const std::string message, Address address = Address()) = 0;
-		virtual ReadResult read(unsigned int timeout = (unsigned int)-1) = 0;
-		virtual ~Interface() = 0;
+		virtual bool ok()															const noexcept	= 0;
+		virtual Interface::ID id()													const noexcept	= 0;
+		virtual bool write(const std::string message, Address address = Address())	noexcept		= 0;
+		virtual ReadResult read(unsigned int timeout = (unsigned int)-1)			noexcept		= 0;
+		virtual ~Interface()														noexcept		= 0;
 	};
 }

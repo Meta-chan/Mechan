@@ -5,5 +5,4 @@
 namespace mechan
 {
 	Interface *new_telegram_interface();
-	extern Interface *telegram_interface;
 }
