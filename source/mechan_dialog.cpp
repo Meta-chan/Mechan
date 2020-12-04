@@ -5,7 +5,7 @@
 
 namespace mechan
 {
-	class Parser
+	class DialogParser
 	{
 	private:
 		FILE *_text					= nullptr;
@@ -13,11 +13,11 @@ namespace mechan
 
 	public:
 		bool parse();
-		~Parser();
+		~DialogParser();
 	};
 }
 
-bool mechan::Parser::parse()
+bool mechan::DialogParser::parse()
 {
 	_text = fopen(MECHAN_DIR, "r");
 	if (_text == nullptr) return false;
@@ -33,14 +33,14 @@ bool mechan::Parser::parse()
 		{
 			if (!buffer.empty())
 			{
-				ir::ConstBlock data(buffer.size() + 1, buffer.c_str());
+				ir::ConstBlock data((unsigned int)buffer.size() + 1, buffer.c_str());
 				_dialog->insert(i, data);
 				break;
 			}
 		}
 		else if (c == '\n')
 		{
-			ir::ConstBlock data(buffer.size() + 1, buffer.c_str());
+			ir::ConstBlock data((unsigned int)buffer.size() + 1, buffer.c_str());
 			_dialog->insert(i, data);
 			buffer.resize(0);
 			i++;
@@ -51,7 +51,7 @@ bool mechan::Parser::parse()
 	return true;
 }
 
-mechan::Parser::~Parser()
+mechan::DialogParser::~DialogParser()
 {
 	if (_dialog != nullptr) delete _dialog;
 	if (_text != nullptr) fclose(_text);
@@ -67,7 +67,7 @@ mechan::Dialog::Dialog() noexcept
 	delete _dialog;
 	bool parsed = false;
 	{
-		Parser parser;
+		DialogParser parser;
 		parsed = parser.parse();
 	}
 	if (parsed) _dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);

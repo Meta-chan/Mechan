@@ -3,6 +3,10 @@
 #include "../header/mechan_pipe_interface.h"
 #include "../header/mechan_log_interface.h"
 #include "../header/mechan_telegram_interface.h"
+#include "../header/mechan_morphology.h"
+#include "../header/mechan_neuro.h"
+#include "../header/mechan_dialog.h"
+#include "../header/mechan_synonym.h"
 
 mechan::Mechan::Mechan() noexcept
 {
@@ -58,7 +62,7 @@ mechan::Dialog *mechan::Mechan::dialog() noexcept
 
 int mechan::Mechan::main() noexcept
 {
-	//NAIN CODE HERE!!!
+	//MAIN CODE HERE!!!
 	if(!_console_interface->ok()
 	|| !_pipe_interface->ok()
 	|| !_log_interface->ok()
@@ -67,6 +71,8 @@ int mechan::Mechan::main() noexcept
 	|| !_morphology->ok()
 	|| !_synonym->ok()
 	|| !_dialog->ok()) return 1;
+
+	return 0;
 }
 
 mechan::Mechan::~Mechan() noexcept

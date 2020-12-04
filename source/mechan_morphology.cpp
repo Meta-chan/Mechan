@@ -4,7 +4,39 @@
 #include <ir_resource/ir_file_resource.h>
 #include <assert.h>
 
-void mechan::Morphology::Parser::_skip_space()
+namespace mechan
+{
+	class MorphologyParser
+	{
+	private:
+		ir::S2STDatabase *_word2group = nullptr;
+		ir::N2STDatabase *_group2data = nullptr;
+		FILE *_morphology = nullptr;
+
+		std::vector<std::string> _characteristics;
+		std::vector<char> _continuous_buffer;
+		std::vector<char> _string_buffer;
+		std::string _characteristics_buffer;
+		std::vector<Morphology::OffsetGroupItem> _item_buffer;
+
+		unsigned int _group = 0;
+		bool _deprecated;
+
+		void _skip_space();
+		void _skip_space_delimiter();
+		void _skip_space_asterisk();
+		void _read_word(bool spelling);
+		void _read_characteristics();
+		void _add_characteristic();
+		bool _skip_line();
+
+	public:
+		bool parse();
+		~MorphologyParser();
+	};
+}
+
+void mechan::MorphologyParser::_skip_space()
 {
 	while (true)
 	{
@@ -19,7 +51,7 @@ void mechan::Morphology::Parser::_skip_space()
 	}
 }
 
-void mechan::Morphology::Parser::_skip_space_delimiter()
+void mechan::MorphologyParser::_skip_space_delimiter()
 {
 	while (true)
 	{
@@ -34,7 +66,7 @@ void mechan::Morphology::Parser::_skip_space_delimiter()
 	}
 }
 
-void mechan::Morphology::Parser::_skip_space_asterisk()
+void mechan::MorphologyParser::_skip_space_asterisk()
 {
 	_deprecated = false;
 	while (true)
@@ -51,7 +83,7 @@ void mechan::Morphology::Parser::_skip_space_asterisk()
 	}
 }
 
-bool mechan::Morphology::Parser::_skip_line()
+bool mechan::MorphologyParser::_skip_line()
 {
 	unsigned int lncount = 0;
 	while (true)
@@ -71,13 +103,13 @@ bool mechan::Morphology::Parser::_skip_line()
 	}
 }
 
-void mechan::Morphology::Parser::_read_word(bool spelling)
+void mechan::MorphologyParser::_read_word(bool spelling)
 {
 	//Begin or continue word recording
 	if (spelling) _item_buffer.back().spelling = (unsigned int)_string_buffer.size();
 	else
 	{
-		OffsetGroupItem item;
+		Morphology::OffsetGroupItem item;
 		item.lowercase_word = (unsigned int)_string_buffer.size();
 		_item_buffer.push_back(item);
 	}
@@ -132,7 +164,7 @@ void mechan::Morphology::Parser::_read_word(bool spelling)
 	}
 }
 
-void mechan::Morphology::Parser::_add_characteristic()
+void mechan::MorphologyParser::_add_characteristic()
 {
 	//Cut spaces off
 	while (!_characteristics.empty() && _characteristics_buffer.back() == ' ') _characteristics_buffer.pop_back();
@@ -163,7 +195,7 @@ void mechan::Morphology::Parser::_add_characteristic()
 	_characteristics_buffer.clear();
 }
 
-void mechan::Morphology::Parser::_read_characteristics()
+void mechan::MorphologyParser::_read_characteristics()
 {
 	//Begin characteristics record
 	_item_buffer.back().characteristics = (unsigned int)_string_buffer.size();
@@ -191,7 +223,7 @@ void mechan::Morphology::Parser::_read_characteristics()
 	_string_buffer.push_back('\0');
 }
 
-bool mechan::Morphology::Parser::parse()
+bool mechan::MorphologyParser::parse()
 {
 	ir::ec code;
 	_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::neww, &code);
@@ -211,7 +243,7 @@ bool mechan::Morphology::Parser::parse()
 		_read_word(true);
 		if (_skip_line())
 		{
-			_continuous_buffer.resize(sizeof(unsigned int) + sizeof(OffsetGroupItem) + _string_buffer.size());
+			_continuous_buffer.resize(sizeof(unsigned int) + sizeof(Morphology::OffsetGroupItem) + _string_buffer.size());
 			ir::ConstBlock group_data((unsigned int)_continuous_buffer.size(), _continuous_buffer.data());
 			if (_group2data->insert(_group, group_data) != ir::ec::ok) return true;
 			_group++;
@@ -221,7 +253,7 @@ bool mechan::Morphology::Parser::parse()
 	return true;
 }
 
-mechan::Morphology::Parser::~Parser()
+mechan::MorphologyParser::~MorphologyParser()
 {
 	if (_word2group != nullptr) delete _word2group;
 	if (_group2data != nullptr) delete _group2data;
@@ -230,37 +262,50 @@ mechan::Morphology::Parser::~Parser()
 
 mechan::Morphology::Morphology()
 {
-	//Open already existing database
-	ir::ec word2group_code;
-	_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::read, &word2group_code);
-	ir::ec group2data_code;
-	_group2data = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\group2data", ir::Database::create_mode::read, &group2data_code);
-	if (word2group_code == ir::ec::ok && group2data_code == ir::ec::ok)
+	//First try
+	_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::read, nullptr);
+	_group2data = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\group2data", ir::Database::create_mode::read, nullptr);
+	if (_word2group->ok() && _group2data->ok())
 	{
 		_word2group->set_ram_mode(true, true);
 		_group2data->set_ram_mode(true, true);
-		_ok = true;
 		return;
 	}
 
-	//Create new database && open it again
-	Parser parser;
-	if (parser.parse())
+	//Second try
+	delete _word2group;
+	delete _group2data;
+	bool parsed;
 	{
-		_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::read, &word2group_code);
-		_group2data = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\group2data", ir::Database::create_mode::read, &group2data_code);
-		if (word2group_code == ir::ec::ok && group2data_code == ir::ec::ok)
+		MorphologyParser parser;
+		parsed = parser.parse();
+	}
+	
+	if (parsed)
+	{
+		_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::read, nullptr);
+		_group2data = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\group2data", ir::Database::create_mode::read, nullptr);
+		if (_word2group->ok() && _group2data->ok())
 		{
 			_word2group->set_ram_mode(true, true);
 			_group2data->set_ram_mode(true, true);
-			_ok = true;
 		}
+	}
+	else
+	{
+		_word2group = nullptr;
+		_group2data = nullptr;
 	}
 }
 
-void mechan::Morphology::word_info(const char *lowercase_word, std::vector<unsigned int> *groups) const noexcept
+bool mechan::Morphology::ok() const noexcept
 {
-	ir::ConstBlock key((unsigned int)strlen(lowercase_word), lowercase_word);
+	return (_word2group != nullptr && _word2group->ok() && _group2data != nullptr && _group2data->ok());
+}
+
+void mechan::Morphology::word_info(const std::string lowercase_word, std::vector<unsigned int> *groups) const noexcept
+{
+	ir::ConstBlock key((unsigned int)lowercase_word.size() - 1, lowercase_word.c_str());
 	ir::ConstBlock data;
 	if (_word2group->read(key, &data) != ir::ec::ok) groups->resize(0);
 	else
@@ -268,7 +313,6 @@ void mechan::Morphology::word_info(const char *lowercase_word, std::vector<unsig
 		groups->resize(data.size / sizeof(unsigned int));
 		memcpy(&groups[0], data.data, data.size);
 	}
-	
 }
 
 void mechan::Morphology::group_info(unsigned int group, std::vector<GroupItem> *items) const noexcept

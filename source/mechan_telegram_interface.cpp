@@ -1,3 +1,5 @@
+#ifndef _DEBUG
+
 #define MECHAN_API_ID		1367564
 #define MECHAN_API_HASH		"582ffce43327426097c4e71833e6e00f"
 #define MECHAN_PHONE		"+491796171879"
@@ -5,10 +7,9 @@
 #define MECHAN_SECOND_NAME	""
 #define MECHAN_PASSWORD		""
 
-#include "../header/mechan_common.h"
+#include "../header/mechan_directory.h"
 #include "../header/mechan_telegram_interface.h"
-#include "../header/mechan_console_interface.h"
-#include "../header/mechan_log_interface.h"
+#include "../header/mechan.h"
 
 #include <td/telegram/Client.h>
 #include <td/telegram/Log.h>
@@ -55,20 +56,18 @@ namespace mechan
 
 	public:		
 		TelegramInterface();
-		bool ok() const noexcept;
-		Interface::ID id() const noexcept;
-		bool write(const std::string message, Address address);
-		ReadResult read(unsigned int timeout);
-		~TelegramInterface();
+		bool ok()												const noexcept;
+		Interface::ID id()										const noexcept;
+		bool write(const std::string message, Address address)	noexcept;
+		ReadResult read(unsigned int timeout)					noexcept;
+		~TelegramInterface()									noexcept;
 	};
 }
 
-mechan::Interface *mechan::new_telegram_interface()
+mechan::Interface *mechan::new_telegram_interface() noexcept
 {
 	return new TelegramInterface;
 }
-
-mechan::Interface *mechan::telegram_interface;
 
 TDP(Object) mechan::TelegramInterface::_call(TDP(Function) function)
 {
@@ -98,7 +97,7 @@ TDP(Object) mechan::TelegramInterface::_call(TDP(Function) function)
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_parameters()
 {
-	log_interface->write("Processing authorizationStateWaitParameters\n");
+	mechan->log_interface()->write("Processing authorizationStateWaitParameters\n");
 	TDP(tdlibParameters) parameters = TDMAKE(tdlibParameters)();
 	parameters->database_directory_ = MECHAN_DIR;
 	parameters->use_message_database_ = true;
@@ -115,34 +114,34 @@ TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_pa
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_encryption_key()
 {
-	log_interface->write("Processing authorizationStateWaitEncryptionKey\n");
+	mechan->log_interface()->write("Processing authorizationStateWaitEncryptionKey\n");
 	return _call(TDMAKE(checkDatabaseEncryptionKey)(""));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_phone_number()
 {
-	log_interface->write("Processing authorizationStateWaitPhoneNumber\n");
+	mechan->log_interface()->write("Processing authorizationStateWaitPhoneNumber\n");
 	TDP(phoneNumberAuthenticationSettings) settings = TDMAKE(phoneNumberAuthenticationSettings)(true, false, false);
 	return _call(TDMAKE(setAuthenticationPhoneNumber)(MECHAN_PHONE, TDMOVE(settings)));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_code()
 {
-	log_interface->write("Processing authorizationStateWaitCode\n");
-	console_interface->write("Waiting confirmation code\n");
-	ReadResult result = console_interface->read();
+	mechan->log_interface()->write("Processing authorizationStateWaitCode\n");
+	mechan->console_interface()->write("Waiting confirmation code\n");
+	ReadResult result = mechan->console_interface()->read();
 	return _call(TDMAKE(checkAuthenticationCode)(result.message));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_registration()
 {
-	log_interface->write("Processing authorizationStateWaitRegistration\n");
+	mechan->log_interface()->write("Processing authorizationStateWaitRegistration\n");
 	return _call(TDMAKE(registerUser)(MECHAN_FIRST_NAME, MECHAN_SECOND_NAME));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_password()
 {
-	log_interface->write("Processing authorizationStateWaitPassword\n");
+	mechan->log_interface()->write("Processing authorizationStateWaitPassword\n");
 	return _call(TDMAKE(checkAuthenticationPassword)(MECHAN_PASSWORD));
 }
 
@@ -175,8 +174,8 @@ void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAu
 		break;
 
 	case td::td_api::authorizationStateReady::ID:
-		log_interface->write("Got authorization\n");
-		console_interface->write("Got authorization\n");
+		mechan->log_interface()->write("Got authorization\n");
+		mechan->console_interface()->write("Got authorization\n");
 		_status = Status::authorized;
 		break;
 	}
@@ -249,7 +248,7 @@ mechan::Interface::ID mechan::TelegramInterface::id() const noexcept
 	return Interface::ID::telegram;
 }
 
-bool mechan::TelegramInterface::write(const std::string message, Address address)
+bool mechan::TelegramInterface::write(const std::string message, Address address) noexcept
 {
 	//Sending message
 	TDP(sendMessage) sendmessage = TDMAKE(sendMessage)();
@@ -265,7 +264,7 @@ bool mechan::TelegramInterface::write(const std::string message, Address address
 	return result != nullptr;
 }
 
-mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeout)
+mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeout) noexcept
 {
 	_read_result.ok = false;
 	clock_t c = clock();
@@ -285,3 +284,62 @@ mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeo
 		if (_read_result.ok || ((unsigned int)(clock() - c) > timeout)) return _read_result;
 	}
 }
+
+mechan::TelegramInterface::~TelegramInterface()
+{
+}
+
+#else
+
+#include "../header/mechan_telegram_interface.h"
+
+namespace mechan
+{
+	class TelegramInterface : public Interface
+	{
+	public:
+		TelegramInterface()										noexcept;
+		bool ok()												const noexcept;
+		Interface::ID id()										const noexcept;
+		bool write(const std::string message, Address address)	noexcept;
+		ReadResult read(unsigned int timeout)					noexcept;
+		~TelegramInterface()									noexcept;
+	};
+}
+
+mechan::Interface *mechan::new_telegram_interface() noexcept
+{
+	return new TelegramInterface;
+}
+
+mechan::TelegramInterface::TelegramInterface() noexcept
+{
+}
+
+bool mechan::TelegramInterface::ok() const noexcept
+{
+	return true;
+}
+
+mechan::Interface::ID mechan::TelegramInterface::id() const noexcept
+{
+	return ID::telegram;
+}
+
+bool mechan::TelegramInterface::write(const std::string message, Address address) noexcept
+{
+	return false;
+}
+
+mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeout) noexcept
+{
+	ReadResult result;
+	result.ok = false;
+	return result;
+}
+
+mechan::TelegramInterface::~TelegramInterface() noexcept
+{
+}
+
+#endif

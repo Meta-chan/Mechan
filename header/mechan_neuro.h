@@ -19,9 +19,9 @@ namespace mechan
 		std::default_random_engine _generator;
 		std::uniform_int_distribution<unsigned int> *_distribution	= nullptr;
 		ir::Neuro<double> *_neuro									= nullptr;
-
-		const char *_unroll_word(const char *begin, double v[33 * n_chars]);
-		void _unroll_message(const std::string message, double v[message_size]) noexcept;
+		
+		void _unroll_char(unsigned char c, double v[33])													noexcept;
+		void _unroll_message(const std::string message, double v[message_size])								noexcept;
 
 	public:
 		Neuro()																		noexcept;

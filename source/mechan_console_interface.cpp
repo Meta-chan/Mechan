@@ -15,7 +15,7 @@ namespace mechan
 	};
 }
 
-mechan::Interface *mechan::new_console_interface()
+mechan::Interface *mechan::new_console_interface() noexcept
 {
 	return new ConsoleInterface;
 }

@@ -1,4 +1,4 @@
-#include "../header/mechan_console_interface.h"
+#include "../header/mechan_pipe_interface.h"
 #include <Windows.h>
 #include <assert.h>
 
@@ -19,7 +19,12 @@ namespace mechan
 	};
 }
 
-mechan::PipeInterface::PipeInterface()
+mechan::Interface *mechan::new_pipe_interface() noexcept
+{
+	return new PipeInterface();
+}
+
+mechan::PipeInterface::PipeInterface() noexcept
 {
 	_hpipe = CreateNamedPipeW(L"\\\\.\\pipe\\mechan", PIPE_ACCESS_DUPLEX, PIPE_TYPE_BYTE | PIPE_NOWAIT, 1, 1024, 1024, 0, nullptr);
 	if (_hpipe != INVALID_HANDLE_VALUE) ConnectNamedPipe(_hpipe, nullptr);
@@ -39,7 +44,7 @@ bool mechan::PipeInterface::write(const std::string message, Address address) no
 {
 	assert(_hpipe != INVALID_HANDLE_VALUE);
 	DWORD written;
-	return WriteFile(_hpipe, message.c_str(), message.size() + 1, &written, nullptr);
+	return WriteFile(_hpipe, message.c_str(), (unsigned int)message.size() + 1, &written, nullptr);
 }
 
 mechan::Interface::ReadResult mechan::PipeInterface::read(unsigned int timeout) noexcept
@@ -54,6 +59,7 @@ mechan::Interface::ReadResult mechan::PipeInterface::read(unsigned int timeout) 
 	ReadFile(_hpipe, &result.message[0], 256, &read, nullptr);
 	result.message.resize(read);
 	result.ok = read != 0;
+	return result;
 }
 
 mechan::PipeInterface::~PipeInterface() noexcept

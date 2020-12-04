@@ -24,7 +24,7 @@ void mechan::Parser::_add_group(const std::string word, unsigned int group) noex
 	std::string lower = lowercase(word);
 	while (!lower.empty() && lower.back() == ' ') lower.pop_back();
 	if (lower.empty()) return;
-	ir::ConstBlock key(lower.size() - 1, lower.c_str());
+	ir::ConstBlock key((unsigned int)lower.size() - 1, lower.c_str());
 	ir::ConstBlock data(sizeof(unsigned int), &group);
 	if (_word2exsyngroup->insert(key, data, ir::Database::insert_mode::not_existing) == ir::ec::key_already_exists)
 	{
@@ -115,7 +115,7 @@ bool mechan::Synonym::ok() const noexcept
 
 void mechan::Synonym::extended_syngroup(const std::string lowercase_word , std::vector<unsigned int> *groups) const noexcept
 {
-	ir::ConstBlock key(lowercase_word.size() - 1, lowercase_word.c_str());
+	ir::ConstBlock key((unsigned int)lowercase_word.size() - 1, lowercase_word.c_str());
 	ir::ConstBlock data;
 	if (_word2exsyngroup->read(key, &data) == ir::ec::ok)
 	{

@@ -4,5 +4,5 @@
 
 namespace mechan
 {
-	Interface *new_telegram_interface();
+	Interface *new_telegram_interface() noexcept;
 }

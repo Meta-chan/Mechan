@@ -8,43 +8,6 @@ namespace mechan
 {
 	class Morphology
 	{
-	private:
-		struct OffsetGroupItem
-		{
-			unsigned int lowercase_word;
-			unsigned int spelling;
-			unsigned int characteristics;
-		};
-
-		class Parser
-		{
-		private:
-			ir::S2STDatabase *_word2group	= nullptr;
-			ir::N2STDatabase *_group2data	= nullptr;
-			FILE *_morphology				= nullptr; 
-			
-			std::vector<std::string> _characteristics;
-			std::vector<char> _continuous_buffer;
-			std::vector<char> _string_buffer;
-			std::string _characteristics_buffer;
-			std::vector<OffsetGroupItem> _item_buffer;
-
-			unsigned int _group = 0;
-			bool _deprecated;
-
-			void _skip_space();
-			void _skip_space_delimiter();
-			void _skip_space_asterisk();
-			void _read_word(bool spelling);
-			void _read_characteristics();
-			void _add_characteristic();
-			bool _skip_line();
-
-		public:
-			bool parse();
-			~Parser();
-		};
-
 	public:
 		enum class Characteristic
 		{
@@ -155,6 +118,13 @@ namespace mechan
 			passive = 39	//Страдательный залог, у причастий
 		};
 
+		struct OffsetGroupItem
+		{
+			unsigned int lowercase_word;
+			unsigned int spelling;
+			unsigned int characteristics;
+		};
+
 		struct GroupItem
 		{
 			const char *lowercase_word;
@@ -163,10 +133,8 @@ namespace mechan
 		};
 
 	private:
-		bool _ok = false;
-		ir::S2STDatabase *_word2group;
-		ir::N2STDatabase *_group2data;
-
+		ir::S2STDatabase *_word2group = nullptr;
+		ir::N2STDatabase *_group2data = nullptr;
 		
 	public:
 		Morphology();

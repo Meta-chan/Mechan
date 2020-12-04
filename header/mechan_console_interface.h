@@ -4,5 +4,5 @@
 
 namespace mechan
 {
-	Interface *new_console_interface();
+	Interface *new_console_interface() noexcept;
 }

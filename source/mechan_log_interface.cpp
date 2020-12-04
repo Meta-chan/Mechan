@@ -20,12 +20,12 @@ namespace mechan
 	};
 }
 
-mechan::Interface *mechan::new_log_interface()
+mechan::Interface *mechan::new_log_interface() noexcept
 {
 	return new LogInterface;
 }
 	
-mechan::LogInterface::LogInterface()
+mechan::LogInterface::LogInterface() noexcept
 {
 	_file = _wfopen(WIDE_MECHAN_DIR "\\log.txt", L"w");
 }
@@ -40,12 +40,12 @@ mechan::Interface::ID mechan::LogInterface::id() const noexcept
 	return ID::log;
 }
 
-bool mechan::LogInterface::write(const std::string message, Address address)
+bool mechan::LogInterface::write(const std::string message, Address address) noexcept
 {
 	return (fwrite(message.c_str(), message.size(), 1, _file) != 0);
 }
 
-mechan::Interface::ReadResult mechan::LogInterface::read(unsigned int timeout)
+mechan::Interface::ReadResult mechan::LogInterface::read(unsigned int timeout) noexcept
 {
 	ReadResult result;
 	result.ok = false;

@@ -1,13 +1,13 @@
 #pragma once
 
-#include "mechan_interface.h"
-#include "mechan_neuro.h"
-#include "mechan_morphology.h"
-#include "mechan_synonym.h"
-#include "mechan_dialog.h"
-
 namespace mechan
 {
+	class Interface;
+	class Neuro;
+	class Morphology;
+	class Synonym;
+	class Dialog;
+
 	class Mechan
 	{
 	private:

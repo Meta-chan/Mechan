@@ -4,5 +4,5 @@
 
 namespace mechan
 {
-	Interface *new_log_interface();
+	Interface *new_log_interface() noexcept;
 }

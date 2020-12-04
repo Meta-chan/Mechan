@@ -4,5 +4,6 @@
 
 namespace mechan
 {
-	std::string lowercase(const std::string string);
+	char lowercase(char c) noexcept;
+	std::string lowercase(const std::string string) noexcept;
 }
