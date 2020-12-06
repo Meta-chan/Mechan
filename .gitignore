@@ -33,3 +33,4 @@ Thumbs.db
 data/
 td/
 build/
+**/log.txt

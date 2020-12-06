@@ -302,7 +302,7 @@ namespace mechan
 		bool ok()												const noexcept;
 		Interface::ID id()										const noexcept;
 		bool write(const std::string message, Address address)	noexcept;
-		ReadResult read(unsigned int timeout)					noexcept;
+		ReadResult read()										noexcept;
 		~TelegramInterface()									noexcept;
 	};
 }
@@ -331,7 +331,7 @@ bool mechan::TelegramInterface::write(const std::string message, Address address
 	return false;
 }
 
-mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeout) noexcept
+mechan::Interface::ReadResult mechan::TelegramInterface::read() noexcept
 {
 	ReadResult result;
 	result.ok = false;

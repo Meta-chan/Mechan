@@ -10,7 +10,7 @@ namespace mechan
 		bool ok()												const noexcept;
 		Interface::ID id()										const noexcept;
 		bool write(const std::string message, Address address)	noexcept;
-		ReadResult read(unsigned int timeout)					noexcept;
+		ReadResult read()										noexcept;
 		~ConsoleInterface()										noexcept;
 	};
 }
@@ -39,25 +39,15 @@ bool mechan::ConsoleInterface::write(const std::string message, Address address)
 	return true;
 }
 
-mechan::Interface::ReadResult mechan::ConsoleInterface::read(unsigned int timeout) noexcept
+mechan::Interface::ReadResult mechan::ConsoleInterface::read() noexcept
 {
-	if (timeout == 0)
-	{
-		ReadResult result;
-		result.address.chat_id = 0;
-		result.address.user_id = 0;
-		result.address.interface_id = ID::console;
-		result.ok = false;
-		return result;
-	}
-
-	//Dummy! Must be impelemented!
+	//Make it non-blocking!
 	ReadResult result;
 	result.address.chat_id = 0;
 	result.address.user_id = 0;
 	result.address.interface_id = ID::console;
 	result.message.reserve(128);
-	result.message.resize(scanf("%s", &result.message[0]));
+	result.message.resize(scanf("%128s", &result.message[0]));
 	result.ok = true;
 	return result;
 }

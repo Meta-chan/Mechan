@@ -15,7 +15,7 @@ namespace mechan
 		bool ok()												const noexcept;
 		Interface::ID id()										const noexcept;
 		bool write(const std::string message, Address address)	noexcept;
-		ReadResult read(unsigned int timeout)					noexcept;
+		ReadResult read()										noexcept;
 		~LogInterface()											noexcept;
 	};
 }
@@ -45,7 +45,7 @@ bool mechan::LogInterface::write(const std::string message, Address address) noe
 	return (fwrite(message.c_str(), message.size(), 1, _file) != 0);
 }
 
-mechan::Interface::ReadResult mechan::LogInterface::read(unsigned int timeout) noexcept
+mechan::Interface::ReadResult mechan::LogInterface::read() noexcept
 {
 	ReadResult result;
 	result.ok = false;

@@ -7,9 +7,11 @@
 #include "../header/mechan_neuro.h"
 #include "../header/mechan_dialog.h"
 #include "../header/mechan_synonym.h"
+#include "../header/mechan_core.h"
 
 mechan::Mechan::Mechan() noexcept
 {
+	mechan = this;
 	_console_interface = new_console_interface();
 	_pipe_interface = new_pipe_interface();
 	_log_interface = new_log_interface();
@@ -18,6 +20,7 @@ mechan::Mechan::Mechan() noexcept
 	_neuro = new Neuro;
 	_dialog = new Dialog;
 	_synonym = new Synonym;
+	_core = new Core;
 }
 
 mechan::Interface *mechan::Mechan::console_interface() noexcept
@@ -62,7 +65,6 @@ mechan::Dialog *mechan::Mechan::dialog() noexcept
 
 int mechan::Mechan::main() noexcept
 {
-	//MAIN CODE HERE!!!
 	if(!_console_interface->ok()
 	|| !_pipe_interface->ok()
 	|| !_log_interface->ok()
@@ -70,7 +72,24 @@ int mechan::Mechan::main() noexcept
 	|| !_neuro->ok()
 	|| !_morphology->ok()
 	|| !_synonym->ok()
-	|| !_dialog->ok()) return 1;
+	|| !_dialog->ok()
+	|| !_core->ok()) return 1;
+
+	while (true)
+	{
+		Interface::ReadResult result;
+		result = _pipe_interface->read();
+		if (result.ok) _pipe_interface->write(_core->answer(result.address, result.message));
+		result = _console_interface->read();
+		if (result.ok) _console_interface->write(_core->answer(result.address, result.message));
+		result = _telegram_interface->read();
+		if (result.ok) _telegram_interface->write(_core->answer(result.address, result.message));
+		if (_core->request_shutdown())
+		{
+			_console_interface->write("Shutting down. Bye~");
+			break;
+		}
+	}
 
 	return 0;
 }
@@ -85,6 +104,7 @@ mechan::Mechan::~Mechan() noexcept
 	if (_morphology != nullptr) delete _morphology;
 	if (_synonym != nullptr) delete _synonym;
 	if (_dialog != nullptr) delete _dialog;
+	if (_core != nullptr) delete _core;
 }
 
 int _main()

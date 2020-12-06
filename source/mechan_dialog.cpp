@@ -88,7 +88,7 @@ std::string mechan::Dialog::dialog(unsigned int i) const noexcept
 
 unsigned int mechan::Dialog::count() const noexcept
 {
-	return (_dialog->count());
+	return (_dialog->get_table_size());
 }
 
 mechan::Dialog::~Dialog() noexcept

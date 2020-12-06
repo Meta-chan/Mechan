@@ -7,6 +7,7 @@ namespace mechan
 	class Morphology;
 	class Synonym;
 	class Dialog;
+	class Core;
 
 	class Mechan
 	{
@@ -19,6 +20,7 @@ namespace mechan
 		Morphology *_morphology			= nullptr;
 		Synonym *_synonym				= nullptr;
 		Dialog *_dialog					= nullptr;
+		Core *_core						= nullptr;
 
 	public:
 		Mechan()						noexcept;

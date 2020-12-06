@@ -34,7 +34,7 @@ namespace mechan
 		virtual bool ok()															const noexcept	= 0;
 		virtual Interface::ID id()													const noexcept	= 0;
 		virtual bool write(const std::string message, Address address = Address())	noexcept		= 0;
-		virtual ReadResult read(unsigned int timeout = (unsigned int)-1)			noexcept		= 0;
+		virtual ReadResult read()													noexcept		= 0;
 		virtual ~Interface()														noexcept		= 0;
 	};
 }

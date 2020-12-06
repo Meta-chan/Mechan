@@ -14,7 +14,7 @@ namespace mechan
 		bool ok() const noexcept;
 		Interface::ID id() const noexcept;
 		bool write(const std::string message, Address address) noexcept;
-		ReadResult read(unsigned int timeout) noexcept;
+		ReadResult read() noexcept;
 		~PipeInterface() noexcept;
 	};
 }
@@ -47,7 +47,7 @@ bool mechan::PipeInterface::write(const std::string message, Address address) no
 	return WriteFile(_hpipe, message.c_str(), (unsigned int)message.size() + 1, &written, nullptr);
 }
 
-mechan::Interface::ReadResult mechan::PipeInterface::read(unsigned int timeout) noexcept
+mechan::Interface::ReadResult mechan::PipeInterface::read() noexcept
 {
 	assert(_hpipe != INVALID_HANDLE_VALUE);
 	ReadResult result;
