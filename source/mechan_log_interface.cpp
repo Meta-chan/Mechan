@@ -1,6 +1,6 @@
 #include "../header/mechan_log_interface.h"
-#include "../header/mechan_directory.h"
 
+#include "../header/mechan_directory.h"
 #include <stdio.h>
 
 namespace mechan

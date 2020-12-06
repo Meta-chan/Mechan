@@ -3,10 +3,10 @@
 namespace mechan
 {
 	class Interface;
-	class Neuro;
+	class Dialog;
 	class Morphology;
 	class Synonym;
-	class Dialog;
+	class Neuro;
 	class Core;
 
 	class Mechan
@@ -16,10 +16,10 @@ namespace mechan
 		Interface *_pipe_interface		= nullptr;
 		Interface *_log_interface		= nullptr;
 		Interface *_telegram_interface	= nullptr;
-		Neuro *_neuro					= nullptr;
+		Dialog *_dialog					= nullptr;
 		Morphology *_morphology			= nullptr;
 		Synonym *_synonym				= nullptr;
-		Dialog *_dialog					= nullptr;
+		Neuro *_neuro					= nullptr;
 		Core *_core						= nullptr;
 
 	public:
@@ -28,10 +28,10 @@ namespace mechan
 		Interface *pipe_interface()		noexcept;
 		Interface *log_interface()		noexcept;
 		Interface *telegram_interface()	noexcept;
-		Neuro *neuro()					noexcept;
+		Dialog *dialog()				noexcept;
 		Morphology *morphology()		noexcept;
 		Synonym *synonym()				noexcept;
-		Dialog *dialog()				noexcept;
+		Neuro *neuro()					noexcept;
 		int main()						noexcept;
 		~Mechan()						noexcept;
 	};

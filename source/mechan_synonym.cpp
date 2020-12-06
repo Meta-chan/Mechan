@@ -1,4 +1,5 @@
 #include "../header/mechan_synonym.h"
+
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
 

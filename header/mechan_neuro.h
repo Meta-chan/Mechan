@@ -1,8 +1,8 @@
 #pragma once
 
-#include <ir_neuro.h>
 #include <string>
 #include <random>
+#include <ir_neuro.h>
 
 namespace mechan
 {
@@ -29,6 +29,7 @@ namespace mechan
 	public:
 		Neuro()																noexcept;
 		bool ok()															const noexcept;
+		void save()															const noexcept;
 		void train()														noexcept;
 		double qestion_answer(
 			const std::vector<std::string> *question, char question_type,

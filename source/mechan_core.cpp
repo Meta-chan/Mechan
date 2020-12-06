@@ -1,9 +1,10 @@
-#include "../header/mechan_core.h"
-#include "../header/mechan.h"
 #include "../header/mechan_dialog.h"
-#include "../header/mechan_parse.h"
+#include "../header/mechan_core.h"
 #include "../header/mechan_synonym.h"
 #include "../header/mechan_neuro.h"
+#include "../header/mechan.h"
+
+#include "../header/mechan_parse.h"
 #include <time.h>
 #include <limits>
 

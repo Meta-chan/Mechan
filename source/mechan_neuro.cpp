@@ -1,9 +1,10 @@
-#include "../header/mechan_neuro.h"
-#include "../header/mechan_directory.h"
 #include "../header/mechan_dialog.h"
-#include "../header/mechan_lowercase.h"
-#include "../header/mechan_parse.h"
+#include "../header/mechan_neuro.h"
 #include "../header/mechan.h"
+
+#include "../header/mechan_parse.h"
+#include "../header/mechan_directory.h"
+#include "../header/mechan_lowercase.h"
 #include <time.h>
 #include <assert.h>
 
@@ -63,6 +64,11 @@ mechan::Neuro::Neuro() noexcept
 bool mechan::Neuro::ok() const noexcept
 {
 	return _neuro != nullptr && _neuro->ok();
+}
+
+void mechan::Neuro::save() const noexcept
+{
+	_neuro->save(WIDE_MECHAN_DIR);
 }
 
 void mechan::Neuro::train() noexcept

@@ -1,7 +1,7 @@
 #include "../header/mechan_morphology.h"
+
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
-#include <ir_resource/ir_file_resource.h>
 #include <assert.h>
 
 namespace mechan
