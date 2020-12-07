@@ -59,7 +59,7 @@ namespace mechan
 		bool ok()												const noexcept;
 		Interface::ID id()										const noexcept;
 		bool write(const std::string message, Address address)	noexcept;
-		ReadResult read(unsigned int timeout)					noexcept;
+		ReadResult read()										noexcept;
 		~TelegramInterface()									noexcept;
 	};
 }
@@ -264,16 +264,21 @@ bool mechan::TelegramInterface::write(const std::string message, Address address
 	return result != nullptr;
 }
 
-mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeout) noexcept
+mechan::Interface::ReadResult mechan::TelegramInterface::read() noexcept
 {
 	_read_result.ok = false;
+	_read_result.address.interface_id = Interface::ID::telegram;
+	_read_result.address.chat_id = 0;
+	_read_result.address.user_id = 0;
+	_read_result.message = "";
+
 	clock_t c = clock();
 	while (true)
 	{
 		td::Client::Response response;
 		if (_responses.empty())
 		{
-			response = _client->receive(0.001 * timeout);
+			response = _client->receive(0.5);
 		}
 		else
 		{
@@ -281,7 +286,7 @@ mechan::Interface::ReadResult mechan::TelegramInterface::read(unsigned int timeo
 			_responses.erase(_responses.begin());
 		}
 		if (response.object != nullptr) _process_message(TDMOVE(response.object));
-		if (_read_result.ok || ((unsigned int)(clock() - c) > timeout)) return _read_result;
+		if (_read_result.ok || (c - clock() / CLOCKS_PER_SEC)) return _read_result;
 	}
 }
 
