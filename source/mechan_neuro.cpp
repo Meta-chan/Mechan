@@ -8,9 +8,9 @@
 #include <time.h>
 #include <assert.h>
 
-void mechan::Neuro::_unroll_char(unsigned char c, double v[33]) noexcept
+void mechan::Neuro::_unroll_char(char c, double v[33]) noexcept
 {
-	unsigned int nchar = (c >= 0xE0) ? (c - 0xE0) : 32;
+	unsigned int nchar = is_lowercase(c) ? (c - (unsigned char)0xE0) : 32;
 	for (unsigned int i = 0; i < nchar; i++) v[i] = -1.0;
 	v[nchar] = 1.0;
 	for (unsigned int i = nchar + 1; i < 33; i++) v[i] = -1.0;

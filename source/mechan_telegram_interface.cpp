@@ -97,7 +97,7 @@ TDP(Object) mechan::TelegramInterface::_call(TDP(Function) function)
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_parameters()
 {
-	mechan->log_interface()->write("Processing authorizationStateWaitParameters\n");
+	mechan->console_interface()->write("Processing authorizationStateWaitParameters");
 	TDP(tdlibParameters) parameters = TDMAKE(tdlibParameters)();
 	parameters->database_directory_ = MECHAN_DIR;
 	parameters->use_message_database_ = true;
@@ -114,34 +114,34 @@ TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_pa
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_encryption_key()
 {
-	mechan->log_interface()->write("Processing authorizationStateWaitEncryptionKey\n");
+	mechan->console_interface()->write("Processing authorizationStateWaitEncryptionKey");
 	return _call(TDMAKE(checkDatabaseEncryptionKey)(""));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_phone_number()
 {
-	mechan->log_interface()->write("Processing authorizationStateWaitPhoneNumber\n");
+	mechan->console_interface()->write("Processing authorizationStateWaitPhoneNumber");
 	TDP(phoneNumberAuthenticationSettings) settings = TDMAKE(phoneNumberAuthenticationSettings)(true, false, false);
 	return _call(TDMAKE(setAuthenticationPhoneNumber)(MECHAN_PHONE, TDMOVE(settings)));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_code()
 {
-	mechan->log_interface()->write("Processing authorizationStateWaitCode\n");
-	mechan->console_interface()->write("Waiting confirmation code\n");
+	mechan->console_interface()->write("Processing authorizationStateWaitCode");
+	mechan->console_interface()->write("Waiting confirmation code");
 	ReadResult result = mechan->console_interface()->read();
 	return _call(TDMAKE(checkAuthenticationCode)(result.message));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_registration()
 {
-	mechan->log_interface()->write("Processing authorizationStateWaitRegistration\n");
+	mechan->console_interface()->write("Processing authorizationStateWaitRegistration");
 	return _call(TDMAKE(registerUser)(MECHAN_FIRST_NAME, MECHAN_SECOND_NAME));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_password()
 {
-	mechan->log_interface()->write("Processing authorizationStateWaitPassword\n");
+	mechan->console_interface()->write("Processing authorizationStateWaitPassword");
 	return _call(TDMAKE(checkAuthenticationPassword)(MECHAN_PASSWORD));
 }
 
@@ -174,8 +174,7 @@ void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAu
 		break;
 
 	case td::td_api::authorizationStateReady::ID:
-		mechan->log_interface()->write("Got authorization\n");
-		mechan->console_interface()->write("Got authorization\n");
+		mechan->console_interface()->write("Got authorization");
 		_status = Status::authorized;
 		break;
 	}

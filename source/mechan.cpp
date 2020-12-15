@@ -1,5 +1,3 @@
-
-
 #include "../header/mechan_console_interface.h"
 #include "../header/mechan_pipe_interface.h"
 #include "../header/mechan_log_interface.h"
@@ -11,6 +9,7 @@
 #include "../header/mechan_core.h"
 #include "../header/mechan.h"
 
+#include "../header/mechan_directory.h"
 #include <time.h>
 
 mechan::Mechan::Mechan() noexcept
@@ -19,12 +18,12 @@ mechan::Mechan::Mechan() noexcept
 	_console_interface = new_console_interface();
 	_pipe_interface = new_pipe_interface();
 	_log_interface = new_log_interface();
-	_telegram_interface = new_telegram_interface();
+	//_telegram_interface = new_telegram_interface();
+	//_dialog = new Dialog; 
 	_morphology = new Morphology;
-	_neuro = new Neuro;
-	_dialog = new Dialog;
 	_synonym = new Synonym;
-	_core = new Core;
+	//_neuro = new Neuro;
+	//_core = new Core;
 }
 
 mechan::Interface *mechan::Mechan::console_interface() noexcept
@@ -69,6 +68,8 @@ mechan::Neuro *mechan::Mechan::neuro() noexcept
 
 int mechan::Mechan::main() noexcept
 {
+	return 1;
+
 	if(!_console_interface->ok()
 	|| !_pipe_interface->ok()
 	|| !_log_interface->ok()

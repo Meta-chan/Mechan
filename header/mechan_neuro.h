@@ -20,7 +20,7 @@ namespace mechan
 		std::uniform_int_distribution<unsigned int> *_distribution	= nullptr;
 		ir::Neuro<double> *_neuro									= nullptr;
 		
-		void _unroll_char(unsigned char c, double v[33])					noexcept;
+		void _unroll_char(char c, double v[33])								noexcept;
 		void _unroll_word(const std::string word, double v[33 * n_chars])	noexcept;
 		void _unroll_message(
 			const std::vector<std::string> *message, char message_type,

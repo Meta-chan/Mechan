@@ -1,93 +1,144 @@
+#include "../header/mechan_interface.h"
+#include "../header/mechan_morphology.h"
 #include "../header/mechan_synonym.h"
+#include "../header/mechan.h"
 
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
 
 namespace mechan
 {
-	class Parser
+	class SynonymParser
 	{
 	private:
 		ir::S2STDatabase *_word2exsyngroup = nullptr;
 		FILE *_synonym = nullptr;
-		std::vector<char> _continuous_buffer;
+		std::vector<unsigned int> _buffer;
+		std::vector<unsigned int> _groups;
+		std::vector<std::string> _words;
 
-		void _add_group(const std::string word, unsigned int group) noexcept;
+		static bool _merge(const unsigned int *from, unsigned int fromsize, std::vector<unsigned int> *to) noexcept;
+		void _extract_groups(const std::string lowercase_word) noexcept;
+		void _write_groups() noexcept;
 
 	public:
 		bool parse() noexcept;
-		~Parser() noexcept;
+		~SynonymParser() noexcept;
 	};
 }
 
-void mechan::Parser::_add_group(const std::string word, unsigned int group) noexcept
+bool mechan::SynonymParser::_merge(const unsigned int *from, unsigned int fromsize, std::vector<unsigned int> *to) noexcept
 {
-	std::string lower = lowercase(word);
-	while (!lower.empty() && lower.back() == ' ') lower.pop_back();
-	if (lower.empty()) return;
-	ir::ConstBlock key((unsigned int)lower.size() - 1, lower.c_str());
-	ir::ConstBlock data(sizeof(unsigned int), &group);
-	if (_word2exsyngroup->insert(key, data, ir::Database::insert_mode::not_existing) == ir::ec::key_already_exists)
+	bool adding = false;
+	for (unsigned int i = 0; i < fromsize; i++)
 	{
-		ir::ConstBlock old_groups;
-		_word2exsyngroup->read(key, &old_groups);
 		bool match = false;
-		for (unsigned int i = 0; i < old_groups.size / sizeof(unsigned int); i++)
+		for (unsigned int j = 0; j < to->size(); j++)
 		{
-			if (*((unsigned int *)old_groups.data + i) == group)
+			if (from[i] == to->at(j))
 			{
 				match = true;
 				break;
 			}
 		}
-
 		if (!match)
 		{
-			_continuous_buffer.resize(old_groups.size + sizeof(unsigned int));
-			memcpy(&_continuous_buffer[0], old_groups.data, old_groups.size);
-			memcpy(&_continuous_buffer[old_groups.size], &group, sizeof(unsigned int));
-			ir::ConstBlock new_groups((unsigned int)_continuous_buffer.size(), _continuous_buffer.data());
-			_word2exsyngroup->insert(key, new_groups);
+			to->push_back(from[i]);
+			adding = true;
+		}
+	}
+	return adding;
+}
+
+void mechan::SynonymParser::_extract_groups(const std::string lowercase_word) noexcept
+{
+	mechan->morphology()->word_info(lowercase_word, &_buffer);
+	_merge(_buffer.data(), (unsigned int)_buffer.size(), &_groups);
+}
+
+void mechan::SynonymParser::_write_groups() noexcept
+{
+	ir::ConstBlock groups((unsigned int)_groups.size() * sizeof(unsigned int), _groups.data());
+
+	for (unsigned int i = 0; i < _words.size(); i++)
+	{
+		ir::ConstBlock keyword((unsigned int)_words[i].size(), _words[i].data());
+		if (_word2exsyngroup->insert(keyword, groups, ir::Database::insert_mode::not_existing) == ir::ec::key_already_exists)
+		{
+			ir::ConstBlock old_groups;
+			_word2exsyngroup->read(keyword, &old_groups);
+			_buffer = _groups;
+			if (_merge((unsigned int*)old_groups.data, old_groups.size / sizeof(unsigned int), &_buffer))
+			{
+				ir::ConstBlock merged_groups((unsigned int)_buffer.size() * sizeof(unsigned int), _buffer.data());
+				_word2exsyngroup->insert(keyword, merged_groups);
+			}
 		}
 	}
 }
 
-bool mechan::Parser::parse() noexcept
+bool mechan::SynonymParser::parse() noexcept
 {
-	_synonym = fopen(MECHAN_DIR, "r");
-	if (_synonym == nullptr) return false;
-	_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\extended_synonym", ir::Database::create_mode::neww, nullptr);
+	_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2exsyngroup", ir::Database::create_mode::neww, nullptr);
 	if (!_word2exsyngroup->ok()) return false;
-	unsigned int group = 0;
-	std::string buffer;
+	_word2exsyngroup->set_ram_mode(true, true);
+
+	_synonym = _wfopen(WIDE_MECHAN_DIR "\\data\\synonym.txt", L"r");
+	if (_synonym == nullptr) return false;
+
+	mechan->log_interface()->write("Morphology file found");
+	fseek(_synonym, 0, SEEK_END);
+	unsigned int file_size = ftell(_synonym);
+	fseek(_synonym, 0, SEEK_SET);
+	unsigned int reported_procent = 0;
+
+	_words.push_back(std::string());
+	bool request_new = true;
+	bool request_space = false;
 	while (true)
 	{
+		unsigned int procent = (unsigned int)(100.0 * ftell(_synonym) / file_size);
+		if (procent > reported_procent)
+		{
+			reported_procent = procent;
+			char report[64];
+			sprintf(report, "%u%% of synonym file processed", reported_procent);
+			mechan->log_interface()->write(report);
+		}
+
 		char c;
 		if (fread(&c, 1, 1, _synonym) == 0) break;
 		else if (c == '\r') {}
 		else if (c == '\n')
 		{
-			_add_group(buffer, group);
-			buffer.resize(0);
-			group++;
+			if (!_words.empty()) _extract_groups(_words.back());
+			if (!_groups.empty()) _write_groups();
+			_groups.resize(0);
+			_words.resize(0);
+			request_new = true;
 		}
 		else if (c == '|')
 		{
-			_add_group(buffer, group);
-			buffer.resize(0);
+			if (!_words.empty()) _extract_groups(_words.back());
+			request_new = true;
 		}
-		else if (c == ' ')
+		else if (!is_lowercase_alphanumeric(lowercase(c)))
 		{
-			if (!buffer.empty()) buffer.push_back(c);
+			request_space = true;
 		}
-		else buffer.push_back(c);
+		else
+		{
+			if (request_new) { _words.push_back(std::string()); request_new = false; request_space = false; }
+			if (request_space) { _words.back().push_back(' '); request_space = false; }
+			_words.back().push_back(lowercase(c));
+		}
 	}
-	while (buffer.back() == ' ') buffer.pop_back();
-	_add_group(lowercase(buffer), group);
+	if (!_words.empty()) _extract_groups(_words.back());
+	if (!_groups.empty()) _write_groups();
 	return true;
 }
 
-mechan::Parser::~Parser() noexcept
+mechan::SynonymParser::~SynonymParser() noexcept
 {
 	if (_synonym != nullptr) fclose(_synonym);
 	if (_word2exsyngroup != nullptr) delete _word2exsyngroup;
@@ -96,16 +147,29 @@ mechan::Parser::~Parser() noexcept
 mechan::Synonym::Synonym() noexcept
 {
 	ir::ec code;
-	_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR, ir::Database::create_mode::read, &code);
-	if (code == ir::ec::ok) return;
+	_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2exsyngroup", ir::Database::create_mode::read, &code);
+	if (code == ir::ec::ok)
+	{
+		mechan->log_interface()->write("Synonym database found");
+		_word2exsyngroup->set_ram_mode(true, true);
+		return;
+	}
 
 	delete _word2exsyngroup;
 	bool parsed;
 	{
-		Parser parser;
+		SynonymParser parser;
 		parsed = parser.parse();
 	}
-	if (parsed) _word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR, ir::Database::create_mode::read, &code);
+	if (parsed)
+	{
+		_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2exsyngroup", ir::Database::create_mode::read, &code);
+		if (_word2exsyngroup->ok())
+		{
+			mechan->log_interface()->write("Morphology database found");
+			_word2exsyngroup->set_ram_mode(true, true);
+		}
+	}
 	else _word2exsyngroup = nullptr;
 }
 
@@ -116,12 +180,12 @@ bool mechan::Synonym::ok() const noexcept
 
 void mechan::Synonym::extended_syngroup(const std::string lowercase_word , std::vector<unsigned int> *groups) const noexcept
 {
-	ir::ConstBlock key((unsigned int)lowercase_word.size() - 1, lowercase_word.c_str());
-	ir::ConstBlock data;
-	if (_word2exsyngroup->read(key, &data) == ir::ec::ok)
+	ir::ConstBlock keyword((unsigned int)lowercase_word.size(), lowercase_word.c_str());
+	ir::ConstBlock groups_data;
+	if (_word2exsyngroup->read(keyword, &groups_data) == ir::ec::ok)
 	{
-		groups->resize(data.size / sizeof(unsigned int));
-		memcpy(&groups->at(0), data.data, data.size);
+		groups->resize(groups_data.size / sizeof(unsigned int));
+		memcpy(&groups->at(0), groups_data.data, groups_data.size);
 	}
 	else groups->resize(0);
 }

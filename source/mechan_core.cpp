@@ -70,7 +70,7 @@ std::string mechan::Core::answer(Interface::Address address, const std::string q
 				if (_intersect(&question_syngroups, &answer_syngroups)) synonym_count++;
 			}
 		}
-		double heuritics = synonym_count / (parsed_answer.size() * parsed_question.size());
+		double heuritics = (double)synonym_count / (parsed_answer.size() * parsed_question.size());
 
 		//Inserting in best table
 		unsigned int place_in_best = (unsigned int)-1;

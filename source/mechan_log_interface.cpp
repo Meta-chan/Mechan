@@ -1,4 +1,5 @@
 #include "../header/mechan_log_interface.h"
+#include "../header/mechan.h"
 
 #include "../header/mechan_directory.h"
 #include <stdio.h>
@@ -42,7 +43,9 @@ mechan::Interface::ID mechan::LogInterface::id() const noexcept
 
 bool mechan::LogInterface::write(const std::string message, Address address) noexcept
 {
-	return (fwrite(message.c_str(), message.size(), 1, _file) != 0);
+	return (mechan->console_interface()->write(message, address) &&
+		fwrite(message.c_str(), message.size(), 1, _file) != 0 &&
+		fwrite("\n", 1, 1, _file) != 0);
 }
 
 mechan::Interface::ReadResult mechan::LogInterface::read() noexcept

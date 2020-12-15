@@ -35,7 +35,7 @@ mechan::Interface::ID mechan::ConsoleInterface::id() const noexcept
 
 bool mechan::ConsoleInterface::write(const std::string message, Address address) noexcept
 {
-	printf("%s", message.c_str());
+	printf("%s\n", message.c_str());
 	return true;
 }
 
