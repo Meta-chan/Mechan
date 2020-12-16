@@ -19,7 +19,7 @@ namespace mechan
 
 bool mechan::DialogParser::parse()
 {
-	_text = fopen(MECHAN_DIR, "r");
+	_text = fopen(MECHAN_DIR "\\data\\dialog.txt", "r");
 	if (_text == nullptr) return false;
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::neww, nullptr);
 	if (!_dialog->ok()) return false;
@@ -29,21 +29,17 @@ bool mechan::DialogParser::parse()
 	while (true)
 	{
 		char c;
-		if (fread(&c, 1, 1, _text) == 0)
+		bool read = fread(&c, 1, 1, _text) != 0;
+		if (!read || c == '\n')
 		{
 			if (!buffer.empty())
 			{
-				ir::ConstBlock data((unsigned int)buffer.size() + 1, buffer.c_str());
+				ir::ConstBlock data((unsigned int)buffer.size(), buffer.c_str());
 				_dialog->insert(i, data);
-				break;
+				buffer.resize(0);
 			}
-		}
-		else if (c == '\n')
-		{
-			ir::ConstBlock data((unsigned int)buffer.size() + 1, buffer.c_str());
-			_dialog->insert(i, data);
-			buffer.resize(0);
 			i++;
+			if (!read) break;
 		}
 		else if (c == '\r') {}
 		else buffer.push_back(c);
@@ -82,7 +78,7 @@ bool mechan::Dialog::ok() const noexcept
 std::string mechan::Dialog::dialog(unsigned int i) const noexcept
 {
 	ir::ConstBlock data;
-	if (_dialog->read(i, &data) == ir::ec::ok) return std::string((const char*)data.data, data.size - 1);
+	if (_dialog->read(i, &data) == ir::ec::ok) return std::string((const char*)data.data, data.size);
 	else return std::string();
 }
 

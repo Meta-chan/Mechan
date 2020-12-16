@@ -18,12 +18,12 @@ mechan::Mechan::Mechan() noexcept
 	_console_interface = new_console_interface();
 	_pipe_interface = new_pipe_interface();
 	_log_interface = new_log_interface();
-	//_telegram_interface = new_telegram_interface();
-	//_dialog = new Dialog; 
+	_telegram_interface = new_telegram_interface();
+	_dialog = new Dialog; 
 	_morphology = new Morphology;
 	_synonym = new Synonym;
-	//_neuro = new Neuro;
-	//_core = new Core;
+	_neuro = new Neuro;
+	_core = new Core;
 }
 
 mechan::Interface *mechan::Mechan::console_interface() noexcept

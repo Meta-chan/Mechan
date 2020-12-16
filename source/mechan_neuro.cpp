@@ -49,16 +49,22 @@ void mechan::Neuro::_unroll_message(
 			_unroll_word(message->at(i), v + 33 * n_chars * (n_words - message->size() + i));
 	}
 	v[33 * n_words * n_chars] = (message_type == '.') ? 1.0 : -1.0;
-	v[33 * n_words * n_chars + 2] = (message_type == '!') ? 1.0 : -1.0;
-	v[33 * n_words * n_chars + 1] = (message_type == '?') ? 1.0 : -1.0;
+	v[33 * n_words * n_chars + 1] = (message_type == '!') ? 1.0 : -1.0;
+	v[33 * n_words * n_chars + 2] = (message_type == '?') ? 1.0 : -1.0;
 }
 
 mechan::Neuro::Neuro() noexcept
 {
-	ir::ec code;
 	_generator.seed((unsigned int)time(nullptr));
 	_distribution = new std::uniform_int_distribution<unsigned int>(mechan->dialog()->count());
-	_neuro = new ir::Neuro<double>(WIDE_MECHAN_DIR "\\data\\neuro", &code);
+	_neuro = new ir::Neuro<double>(WIDE_MECHAN_DIR "\\data\\neuro", nullptr);
+	if (!_neuro->ok())
+	{
+		delete _neuro;
+		unsigned int layers[4] = { 33 * n_words * n_chars + 3, 2000, 2000, 1 };
+		_neuro = new ir::Neuro<double>(4, layers, 0.1, nullptr);
+	}
+	if (_neuro->ok()) _neuro->set_coefficient(0.1);
 }
 
 bool mechan::Neuro::ok() const noexcept
