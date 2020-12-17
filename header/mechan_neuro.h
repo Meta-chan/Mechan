@@ -6,6 +6,8 @@
 
 namespace mechan
 {
+	class Mechan;
+
 	class Neuro
 	{
 	private:
@@ -13,9 +15,8 @@ namespace mechan
 		static const unsigned int n_chars = 10;
 		static const unsigned int message_size = 33 * n_chars * n_words + 3;
 		static const unsigned int negative_pro_positive = 1;
-		static const double train_part;
-		static const double coefficient;
-
+		
+		Mechan *_mechan												= nullptr;
 		std::default_random_engine _generator;
 		std::uniform_int_distribution<unsigned int> *_distribution	= nullptr;
 		ir::Neuro<double> *_neuro									= nullptr;
@@ -27,7 +28,7 @@ namespace mechan
 			double v[message_size])											noexcept;
 
 	public:
-		Neuro()																noexcept;
+		Neuro(Mechan *mechan)												noexcept;
 		bool ok()															const noexcept;
 		void save()															const noexcept;
 		void train()														noexcept;

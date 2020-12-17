@@ -1,40 +1,36 @@
 #pragma once
 
+#include "../header/mechan_socket.h"
+#include "../header/mechan_dialog.h"
+#include "../header/mechan_morphology.h"
+#include "../header/mechan_synonym.h"
+#include "../header/mechan_neuro.h"
+#include "../header/mechan_core.h"
+
 namespace mechan
 {
-	class Interface;
-	class Dialog;
-	class Morphology;
-	class Synonym;
-	class Neuro;
-	class Core;
 
 	class Mechan
 	{
 	private:
-		Interface *_console_interface	= nullptr;
-		Interface *_pipe_interface		= nullptr;
-		Interface *_log_interface		= nullptr;
-		Interface *_telegram_interface	= nullptr;
-		Dialog *_dialog					= nullptr;
-		Morphology *_morphology			= nullptr;
-		Synonym *_synonym				= nullptr;
-		Neuro *_neuro					= nullptr;
-		Core *_core						= nullptr;
+		Server::Address _event_log_address;
+		Server::Address _neuro_log_address;
+
+		Server _server;
+		Dialog _dialog;
+		Morphology _morphology;
+		Synonym _synonym;
+		Neuro _neuro;
+		Core _core;
 
 	public:
-		Mechan()						noexcept;
-		Interface *console_interface()	noexcept;
-		Interface *pipe_interface()		noexcept;
-		Interface *log_interface()		noexcept;
-		Interface *telegram_interface()	noexcept;
-		Dialog *dialog()				noexcept;
-		Morphology *morphology()		noexcept;
-		Synonym *synonym()				noexcept;
-		Neuro *neuro()					noexcept;
-		int main()						noexcept;
-		~Mechan()						noexcept;
+		Mechan()										noexcept;
+		Dialog *dialog()								noexcept;
+		Morphology *morphology()						noexcept;
+		Synonym *synonym()								noexcept;
+		Neuro *neuro()									noexcept;
+		void print_event_log(const std::string string)	noexcept;
+		void print_train_log(const std::string string)	noexcept;
+		int main()										noexcept;
 	};
-
-	extern Mechan *mechan;
 }

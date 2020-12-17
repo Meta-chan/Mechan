@@ -5,13 +5,16 @@
 
 namespace mechan
 {
+	class Mechan;
+
 	class Dialog
 	{
 	private:
+		Mechan *_mechan						= nullptr;
 		ir::N2STDatabase *_dialog			= nullptr;
 
 	public:
-		Dialog()							noexcept;
+		Dialog(Mechan *mechan)				noexcept;
 		bool ok()							const noexcept;
 		std::string dialog(unsigned int i)	const noexcept;
 		unsigned int count()				const noexcept;

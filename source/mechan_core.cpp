@@ -1,9 +1,4 @@
-#include "../header/mechan_dialog.h"
-#include "../header/mechan_core.h"
-#include "../header/mechan_synonym.h"
-#include "../header/mechan_neuro.h"
 #include "../header/mechan.h"
-
 #include "../header/mechan_parse.h"
 #include <time.h>
 #include <limits>
@@ -20,21 +15,16 @@ bool mechan::Core::_intersect(const std::vector<unsigned int> *a, const std::vec
 	return false;
 }
 
-mechan::Core::Core() noexcept
-	: _distribution(0, mechan->dialog()->count() - 1)
+mechan::Core::Core(Mechan *mechan) noexcept :
+	_mechan(mechan),
+	_distribution(0, mechan->dialog()->count() - 1)
 {
 	_engine.seed((unsigned int)time(nullptr));
 	_ok = true;
 }
 
-std::string mechan::Core::answer(Interface::Address address, const std::string question)  noexcept
+std::string mechan::Core::answer(const std::string question)  noexcept
 {
-	if (address.interface_id == Interface::ID::console && question == "shutdown")
-	{
-		_reqest_shutdown = true;
-		return "Shutdown command recognized";
-	}
-
 	const unsigned int best_count = 100;
 	struct
 	{
@@ -47,8 +37,8 @@ std::string mechan::Core::answer(Interface::Address address, const std::string q
 	{
 		//Receiving question & answer pair
 		unsigned int nmessage = _distribution(_engine);
-		std::string question = mechan->dialog()->dialog(nmessage);
-		std::string answer = mechan->dialog()->dialog(nmessage + 1);
+		std::string question = _mechan->dialog()->dialog(nmessage);
+		std::string answer = _mechan->dialog()->dialog(nmessage + 1);
 		if (question.empty() || answer.empty()) continue;
 		
 		//Parsing question & answer
@@ -62,11 +52,11 @@ std::string mechan::Core::answer(Interface::Address address, const std::string q
 		for (unsigned int i = 0; i < parsed_question.size(); i++)
 		{
 			std::vector<unsigned int> question_syngroups;
-			mechan->synonym()->extended_syngroup(parsed_question[i], &question_syngroups);
+			_mechan->synonym()->extended_syngroup(parsed_question[i], &question_syngroups);
 			for (unsigned int j = 0; j < parsed_answer.size(); j++)
 			{
 				std::vector<unsigned int> answer_syngroups;
-				mechan->synonym()->extended_syngroup(parsed_answer[j], &answer_syngroups);
+				_mechan->synonym()->extended_syngroup(parsed_answer[j], &answer_syngroups);
 				if (_intersect(&question_syngroups, &answer_syngroups)) synonym_count++;
 			}
 		}
@@ -98,7 +88,7 @@ std::string mechan::Core::answer(Interface::Address address, const std::string q
 	{
 		std::vector<std::string> parsed_answer;
 		parse(best[i].answer, &parsed_answer);
-		best[i].heuristics = mechan->neuro()->qestion_answer(
+		best[i].heuristics = _mechan->neuro()->qestion_answer(
 			&parsed_question, question.back(),
 			&parsed_answer, best[i].answer.back());
 	}
@@ -116,11 +106,6 @@ std::string mechan::Core::answer(Interface::Address address, const std::string q
 	}
 
 	return best_answer;
-}
-
-bool mechan::Core::request_shutdown() const noexcept
-{
-	return _reqest_shutdown;
 }
 
 bool mechan::Core::ok() const noexcept

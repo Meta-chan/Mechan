@@ -1,8 +1,4 @@
-#include "../header/mechan_interface.h"
-#include "../header/mechan_morphology.h"
-#include "../header/mechan_synonym.h"
 #include "../header/mechan.h"
-
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
 
@@ -11,8 +7,9 @@ namespace mechan
 	class SynonymParser
 	{
 	private:
-		ir::S2STDatabase *_word2exsyngroup = nullptr;
-		FILE *_synonym = nullptr;
+		Mechan *_mechan						= nullptr;
+		ir::S2STDatabase *_word2exsyngroup	= nullptr;
+		FILE *_synonym						= nullptr;
 		std::vector<unsigned int> _buffer;
 		std::vector<unsigned int> _groups;
 		std::vector<std::string> _words;
@@ -22,6 +19,7 @@ namespace mechan
 		void _write_groups() noexcept;
 
 	public:
+		SynonymParser(Mechan *mechan);
 		bool parse() noexcept;
 		~SynonymParser() noexcept;
 	};
@@ -52,7 +50,7 @@ bool mechan::SynonymParser::_merge(const unsigned int *from, unsigned int fromsi
 
 void mechan::SynonymParser::_extract_groups(const std::string lowercase_word) noexcept
 {
-	mechan->morphology()->word_info(lowercase_word, &_buffer);
+	_mechan->morphology()->word_info(lowercase_word, &_buffer);
 	_merge(_buffer.data(), (unsigned int)_buffer.size(), &_groups);
 }
 
@@ -77,6 +75,9 @@ void mechan::SynonymParser::_write_groups() noexcept
 	}
 }
 
+mechan::SynonymParser::SynonymParser(Mechan *mechan) : _mechan(mechan)
+{}
+
 bool mechan::SynonymParser::parse() noexcept
 {
 	_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2exsyngroup", ir::Database::create_mode::neww, nullptr);
@@ -86,7 +87,7 @@ bool mechan::SynonymParser::parse() noexcept
 	_synonym = _wfopen(WIDE_MECHAN_DIR "\\data\\synonym.txt", L"r");
 	if (_synonym == nullptr) return false;
 
-	mechan->log_interface()->write("Morphology file found");
+	_mechan->print_event_log("Morphology file found");
 	fseek(_synonym, 0, SEEK_END);
 	unsigned int file_size = ftell(_synonym);
 	fseek(_synonym, 0, SEEK_SET);
@@ -103,7 +104,7 @@ bool mechan::SynonymParser::parse() noexcept
 			reported_procent = procent;
 			char report[64];
 			sprintf(report, "%u%% of synonym file processed", reported_procent);
-			mechan->log_interface()->write(report);
+			_mechan->print_event_log(report);
 		}
 
 		char c;
@@ -144,13 +145,13 @@ mechan::SynonymParser::~SynonymParser() noexcept
 	if (_word2exsyngroup != nullptr) delete _word2exsyngroup;
 }
 
-mechan::Synonym::Synonym() noexcept
+mechan::Synonym::Synonym(Mechan *mechan) noexcept  : _mechan(mechan)
 {
 	ir::ec code;
 	_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2exsyngroup", ir::Database::create_mode::read, &code);
 	if (code == ir::ec::ok)
 	{
-		mechan->log_interface()->write("Synonym database found");
+		_mechan->print_event_log("Synonym database found");
 		_word2exsyngroup->set_ram_mode(true, true);
 		return;
 	}
@@ -158,7 +159,7 @@ mechan::Synonym::Synonym() noexcept
 	delete _word2exsyngroup;
 	bool parsed;
 	{
-		SynonymParser parser;
+		SynonymParser parser(_mechan);
 		parsed = parser.parse();
 	}
 	if (parsed)
@@ -166,7 +167,7 @@ mechan::Synonym::Synonym() noexcept
 		_word2exsyngroup = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2exsyngroup", ir::Database::create_mode::read, &code);
 		if (_word2exsyngroup->ok())
 		{
-			mechan->log_interface()->write("Morphology database found");
+			_mechan->print_event_log("Morphology database found");
 			_word2exsyngroup->set_ram_mode(true, true);
 		}
 	}

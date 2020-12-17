@@ -6,6 +6,8 @@
 
 namespace mechan
 {
+	class Mechan;
+
 	class Morphology
 	{
 	public:
@@ -133,14 +135,15 @@ namespace mechan
 		};
 
 	private:
-		ir::S2STDatabase *_word2group = nullptr;
-		ir::N2STDatabase *_group2data = nullptr;
+		Mechan *_mechan					= nullptr;
+		ir::S2STDatabase *_word2group	= nullptr;
+		ir::N2STDatabase *_group2data	= nullptr;
 		
 	public:
-		Morphology();
-		bool ok() const noexcept;
-		void word_info(const std::string lowercase_word, std::vector<unsigned int> *groups) const noexcept;
-		void group_info(unsigned int group, std::vector<GroupItem> *data) const noexcept;
+		Morphology(Mechan *mechan)															noexcept;
+		bool ok()																			const noexcept;
+		void word_info(const std::string lowercase_word, std::vector<unsigned int> *groups)	const noexcept;
+		void group_info(unsigned int group, std::vector<GroupItem> *data)					const noexcept;
 		~Morphology();
 	};
 }

@@ -53,7 +53,7 @@ mechan::DialogParser::~DialogParser()
 	if (_text != nullptr) fclose(_text);
 }
 
-mechan::Dialog::Dialog() noexcept
+mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	//First try
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);

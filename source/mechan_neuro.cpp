@@ -1,7 +1,4 @@
-#include "../header/mechan_dialog.h"
-#include "../header/mechan_neuro.h"
 #include "../header/mechan.h"
-
 #include "../header/mechan_parse.h"
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
@@ -53,7 +50,7 @@ void mechan::Neuro::_unroll_message(
 	v[33 * n_words * n_chars + 2] = (message_type == '?') ? 1.0 : -1.0;
 }
 
-mechan::Neuro::Neuro() noexcept
+mechan::Neuro::Neuro(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	_generator.seed((unsigned int)time(nullptr));
 	_distribution = new std::uniform_int_distribution<unsigned int>(mechan->dialog()->count());
@@ -81,9 +78,9 @@ void mechan::Neuro::train() noexcept
 {
 	//unrolling message
 	unsigned int nmessage = (*_distribution)(_generator);
-	std::string question = mechan->dialog()->dialog(nmessage);
+	std::string question = _mechan->dialog()->dialog(nmessage);
 	if (question.empty()) return;
-	std::string answer = mechan->dialog()->dialog(nmessage);
+	std::string answer = _mechan->dialog()->dialog(nmessage);
 	if (answer.empty()) return;
 
 	std::vector<std::string> parsed;
@@ -98,12 +95,16 @@ void mechan::Neuro::train() noexcept
 		_neuro->forward();
 		_neuro->get_goal()->at(0) = 1.0;
 		_neuro->backward();
+
+		char message[512];
+		sprintf(message, "Positive training: %lf", _neuro->get_output()->at(0));
+		_mechan->print_train_log(message);
 	}
 	else while (true)
 	{
 		//negative training
 		nmessage = (*_distribution)(_generator);
-		std::string random = mechan->dialog()->dialog(nmessage);
+		std::string random = _mechan->dialog()->dialog(nmessage);
 		if (!random.empty())
 		{
 			parse(random, &parsed);
@@ -111,6 +112,10 @@ void mechan::Neuro::train() noexcept
 			_neuro->forward();
 			_neuro->get_goal()->at(0) = -1.0;
 			_neuro->backward();
+
+			char message[512];
+			sprintf(message, "Negative training: %lf", _neuro->get_output()->at(0));
+			_mechan->print_train_log(message);
 		}
 	}
 }

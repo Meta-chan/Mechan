@@ -1,7 +1,4 @@
-#include "../header/mechan_interface.h"
-#include "../header/mechan_morphology.h"
 #include "../header/mechan.h"
-
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
 #include <assert.h>
@@ -11,11 +8,12 @@ namespace mechan
 	class MorphologyParser
 	{
 	private:
-		ir::S2STDatabase *_word2group = nullptr;
-		ir::N2STDatabase *_group2data = nullptr;
-		FILE *_morphology = nullptr;
-		unsigned int _group = 0;
-		bool _deprecated = false;
+		Mechan *_mechan					= nullptr;
+		ir::S2STDatabase *_word2group	= nullptr;
+		ir::N2STDatabase *_group2data	= nullptr;
+		FILE *_morphology				= nullptr;
+		unsigned int _group				= 0;
+		bool _deprecated				= false;
 		std::vector<std::string> _characteristics;
 		std::string _characteristic;
 		std::vector<Morphology::OffsetGroupItem> _items;
@@ -32,6 +30,7 @@ namespace mechan
 		bool _skip_line()												noexcept;
 
 	public:
+		MorphologyParser(Mechan *mechan)								noexcept;
 		bool parse()													noexcept;
 		~MorphologyParser()												noexcept;
 	};
@@ -232,6 +231,9 @@ void mechan::MorphologyParser::_read_characteristics() noexcept
 	_items_data.push_back('\0');
 }
 
+mechan::MorphologyParser::MorphologyParser(Mechan *mechan) noexcept : _mechan(mechan)
+{}
+
 bool mechan::MorphologyParser::parse() noexcept
 {
 	_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::neww, nullptr);
@@ -245,7 +247,7 @@ bool mechan::MorphologyParser::parse() noexcept
 	_morphology = _wfopen(WIDE_MECHAN_DIR "\\data\\morphology.txt", L"r"); 
 	if (_morphology == nullptr) return false;
 
-	mechan->log_interface()->write("Morphology file found");
+	_mechan->print_event_log("Morphology file found");
 	fseek(_morphology, 0, SEEK_END);
 	unsigned int file_size = ftell(_morphology);
 	fseek(_morphology, 0, SEEK_SET);
@@ -259,7 +261,7 @@ bool mechan::MorphologyParser::parse() noexcept
 			reported_procent = procent;
 			char report[64];
 			sprintf(report, "%u%% of morphology file processed", reported_procent);
-			mechan->log_interface()->write(report);
+			_mechan->print_event_log(report);
 		}
 
 		_skip_space_asterisk();
@@ -302,14 +304,14 @@ mechan::MorphologyParser::~MorphologyParser()
 	if (_morphology != nullptr) fclose(_morphology);
 }
 
-mechan::Morphology::Morphology()
+mechan::Morphology::Morphology(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	//First try
 	_word2group = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\word2group", ir::Database::create_mode::read, nullptr);
 	_group2data = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\group2data", ir::Database::create_mode::read, nullptr);
 	if (_word2group->ok() && _group2data->ok())
 	{
-		mechan->log_interface()->write("Morphology database found");
+		_mechan->print_event_log("Morphology database found");
 		_word2group->set_ram_mode(true, true);
 		_group2data->set_ram_mode(true, true);
 		return;
@@ -320,7 +322,7 @@ mechan::Morphology::Morphology()
 	delete _group2data;
 	bool parsed;
 	{
-		MorphologyParser parser;
+		MorphologyParser parser(_mechan);
 		parsed = parser.parse();
 	}
 	
@@ -330,7 +332,7 @@ mechan::Morphology::Morphology()
 		_group2data = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\group2data", ir::Database::create_mode::read, nullptr);
 		if (_word2group->ok() && _group2data->ok())
 		{
-			mechan->log_interface()->write("Morphology database found");
+			_mechan->print_event_log("Morphology database found");
 			_word2group->set_ram_mode(true, true);
 			_group2data->set_ram_mode(true, true);
 		}
