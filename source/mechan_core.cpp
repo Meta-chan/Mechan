@@ -43,9 +43,9 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 		
 		//Parsing question & answer
 		std::vector<std::string> parsed_question;
-		parse(question, &parsed_question);
+		parse(question, &parsed_question, true);
 		std::vector<std::string> parsed_answer;
-		parse(answer, &parsed_answer);
+		parse(answer, &parsed_answer, true);
 		
 		//Counting synonyms
 		unsigned int synonym_count = 0;
@@ -83,14 +83,17 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 
 	//Passing throught neuronal net
 	std::vector<std::string> parsed_question;
-	parse(question, &parsed_question);
+	parse(question, &parsed_question, true);
 	for (unsigned int i = 0; i < best_count; i++)
 	{
-		std::vector<std::string> parsed_answer;
-		parse(best[i].answer, &parsed_answer);
-		best[i].heuristics = _mechan->neuro()->qestion_answer(
-			&parsed_question, question.back(),
-			&parsed_answer, best[i].answer.back());
+		if (!best[i].answer.empty())
+		{
+			std::vector<std::string> parsed_answer;
+			parse(best[i].answer, &parsed_answer, true);
+			best[i].heuristics = _mechan->neuro()->qestion_answer(
+				&parsed_question, question.back(),
+				&parsed_answer, best[i].answer.back());
+		}
 	}
 
 	//Choosing best of the best

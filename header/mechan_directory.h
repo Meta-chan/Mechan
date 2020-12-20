@@ -1,4 +1,4 @@
 #pragma once
 
-#define MECHAN_DIR "E:\\Project\\Mechan"
-#define WIDE_MECHAN_DIR L"E:\\Project\\Mechan"
+#define MECHAN_DIR "C:\\Project\\Mechan"
+#define WIDE_MECHAN_DIR L"C:\\Project\\Mechan"

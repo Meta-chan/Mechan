@@ -77,6 +77,7 @@ bool mechan::Dialog::ok() const noexcept
 
 std::string mechan::Dialog::dialog(unsigned int i) const noexcept
 {
+	assert(ok());
 	ir::ConstBlock data;
 	if (_dialog->read(i, &data) == ir::ec::ok) return std::string((const char*)data.data, data.size);
 	else return std::string();
@@ -84,6 +85,7 @@ std::string mechan::Dialog::dialog(unsigned int i) const noexcept
 
 unsigned int mechan::Dialog::count() const noexcept
 {
+	assert(ok());
 	return (_dialog->get_table_size());
 }
 

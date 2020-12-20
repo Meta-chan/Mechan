@@ -7,7 +7,7 @@
 
 void mechan::Neuro::_unroll_char(char c, double v[33]) noexcept
 {
-	unsigned int nchar = is_lowercase(c) ? (c - (unsigned char)0xE0) : 32;
+	unsigned int nchar = is_lowercase(c) ? ((unsigned char)c - (unsigned char)0xE0) : 32;
 	for (unsigned int i = 0; i < nchar; i++) v[i] = -1.0;
 	v[nchar] = 1.0;
 	for (unsigned int i = nchar + 1; i < 33; i++) v[i] = -1.0;
@@ -84,13 +84,13 @@ void mechan::Neuro::train() noexcept
 	if (answer.empty()) return;
 
 	std::vector<std::string> parsed;
-	parse(question, &parsed);
+	parse(question, &parsed, true);
 	_unroll_message(&parsed, question.back(), _neuro->get_input()->data());
 
 	if (((*_distribution)(_generator) % (1 + negative_pro_positive)) == 0)
 	{
 		//positive training
-		parse(answer, &parsed);
+		parse(answer, &parsed, true);
 		_unroll_message(&parsed, answer.back(), _neuro->get_input()->data() + message_size);
 		_neuro->forward();
 		_neuro->get_goal()->at(0) = 1.0;
@@ -107,7 +107,7 @@ void mechan::Neuro::train() noexcept
 		std::string random = _mechan->dialog()->dialog(nmessage);
 		if (!random.empty())
 		{
-			parse(random, &parsed);
+			parse(random, &parsed, true);
 			_unroll_message(&parsed, random.back(), _neuro->get_input()->data() + message_size);
 			_neuro->forward();
 			_neuro->get_goal()->at(0) = -1.0;
@@ -132,6 +132,6 @@ double mechan::Neuro::qestion_answer(
 
 mechan::Neuro::~Neuro() noexcept
 {
-	if (_neuro != nullptr && _neuro->ok()) _neuro->save(WIDE_MECHAN_DIR "data\\neuro");
+	if (_neuro != nullptr && _neuro->ok()) _neuro->save(WIDE_MECHAN_DIR "\\data\\neuro");
 	delete _neuro;
 }

@@ -39,8 +39,6 @@ void mechan::Mechan::print_train_log(const std::string string) noexcept
 
 int mechan::Mechan::main() noexcept
 {
-	return 1;
-
 	if(!_server.ok()
 	|| !_neuro.ok()
 	|| !_morphology.ok()

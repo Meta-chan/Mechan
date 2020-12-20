@@ -1,6 +1,7 @@
 #include "../header/mechan_parse.h"
+#include "../header/mechan_lowercase.h"
 
-void parse(const std::string string, std::vector<std::string> *words) noexcept
+void mechan::parse(const std::string string, std::vector<std::string> *words, bool lower) noexcept
 {
 	words->resize(0);
 	bool request_new = true;
@@ -17,7 +18,7 @@ void parse(const std::string string, std::vector<std::string> *words) noexcept
 				words->push_back(std::string());
 				request_new = false;
 			}
-			words->back().push_back(string[i]);
+			words->back().push_back(lower ? lowercase(string[i]) : string[i]);
 		}
 		else if (string[i] == '-')
 		{
