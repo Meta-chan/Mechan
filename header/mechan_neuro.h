@@ -11,8 +11,8 @@ namespace mechan
 	class Neuro
 	{
 	private:
-		static const unsigned int n_words = 10;
-		static const unsigned int n_chars = 10;
+		static const unsigned int n_words = 8;
+		static const unsigned int n_chars = 8;
 		static const unsigned int message_size = 33 * n_chars * n_words + 3;
 		static const unsigned int negative_pro_positive = 1;
 		

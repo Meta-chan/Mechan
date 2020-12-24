@@ -106,9 +106,9 @@ bool mechan::MorphologyParser::_skip_line() noexcept
 bool mechan::MorphologyParser::_merge(ir::ConstBlock old_groups, unsigned int new_group) noexcept
 {
 	bool match = false;
-	for (unsigned int i = 0; i < old_groups.size / sizeof(unsigned int); i++)
+	for (size_t i = 0; i < old_groups.size() / sizeof(unsigned int); i++)
 	{
-		if (*((unsigned int *)old_groups.data + i) == _group)
+		if (*((unsigned int *)old_groups.data() + i) == _group)
 		{
 			match = true;
 			break;
@@ -117,9 +117,9 @@ bool mechan::MorphologyParser::_merge(ir::ConstBlock old_groups, unsigned int ne
 
 	if (!match)
 	{
-		_buffer.resize(old_groups.size + sizeof(unsigned int));
-		memcpy(&_buffer[0], old_groups.data, old_groups.size);
-		memcpy(&_buffer[old_groups.size], &_group, sizeof(unsigned int));
+		_buffer.resize(old_groups.size() + sizeof(unsigned int));
+		memcpy(&_buffer[0], old_groups.data(), old_groups.size());
+		memcpy(&_buffer[old_groups.size()], &_group, sizeof(unsigned int));
 		return true;
 	}
 	else return false;
@@ -156,8 +156,8 @@ void mechan::MorphologyParser::_read_word(bool spelling) noexcept
 	if (!spelling)
 	{
 		const char *lowercase_word = _items_data.data() + _items.back().lowercase_word;
-		ir::ConstBlock keyword((unsigned int)_items_data.size() - _items.back().lowercase_word - 1, lowercase_word);
-		ir::ConstBlock new_group(sizeof(unsigned int), &_group);
+		ir::ConstBlock keyword(lowercase_word, _items_data.size() - _items.back().lowercase_word - 1);
+		ir::ConstBlock new_group(&_group, sizeof(unsigned int));
 		ir::ec code = _word2group->insert(keyword, new_group, ir::S2STDatabase::insert_mode::not_existing);
 		if (code == ir::ec::key_already_exists)
 		{
@@ -165,7 +165,7 @@ void mechan::MorphologyParser::_read_word(bool spelling) noexcept
 			_word2group->read(keyword, &old_groups);
 			if (_merge(old_groups, _group))
 			{
-				ir::ConstBlock merged_groups((unsigned int)_buffer.size(), _buffer.data());
+				ir::ConstBlock merged_groups(_buffer.data(), _buffer.size());
 				_word2group->insert(keyword, merged_groups);
 			}
 		}
@@ -286,7 +286,7 @@ bool mechan::MorphologyParser::parse() noexcept
 			memcpy(&_buffer[sizeof(unsigned int) + item_number * sizeof(Morphology::OffsetGroupItem)],
 				_items_data.data(),
 				_items_data.size());
-			ir::ConstBlock group_data((unsigned int)_buffer.size(), _buffer.data());
+			ir::ConstBlock group_data(_buffer.data(), _buffer.size());
 			if (_group2data->insert(_group, group_data) != ir::ec::ok) return true;
 			_items.resize(0);
 			_items_data.resize(0);
@@ -351,13 +351,13 @@ bool mechan::Morphology::ok() const noexcept
 
 void mechan::Morphology::word_info(const std::string lowercase_word, std::vector<unsigned int> *groups) const noexcept
 {
-	ir::ConstBlock key((unsigned int)lowercase_word.size(), lowercase_word.c_str());
+	ir::ConstBlock key(lowercase_word.c_str(), lowercase_word.size());
 	ir::ConstBlock data;
 	if (_word2group->read(key, &data) != ir::ec::ok) groups->resize(0);
 	else
 	{
-		groups->resize(data.size / sizeof(unsigned int));
-		memcpy(&groups->at(0), data.data, data.size);
+		groups->resize(data.size() / sizeof(unsigned int));
+		memcpy(&groups->at(0), data.data(), data.size());
 	}
 }
 
@@ -366,13 +366,13 @@ void mechan::Morphology::group_info(unsigned int group, std::vector<GroupItem> *
 	ir::ConstBlock data;
 	assert(_group2data->read(group, &data) == ir::ec::ok);
 	unsigned int items_number;
-	memcpy(&items_number, data.data, sizeof(unsigned int));
+	memcpy(&items_number, data.data(), sizeof(unsigned int));
 	items->resize(items_number);
 	for (unsigned int i = 0; i < items_number; i++)
 	{
 		OffsetGroupItem item;
-		memcpy(&item, (char*)data.data + sizeof(unsigned int) + i * sizeof(OffsetGroupItem), sizeof(OffsetGroupItem));
-		const char *string_begin = (char*)data.data + sizeof(unsigned int) + items_number * sizeof(OffsetGroupItem);
+		memcpy(&item, (char*)data.data() + sizeof(unsigned int) + i * sizeof(OffsetGroupItem), sizeof(OffsetGroupItem));
+		const char *string_begin = (char*)data.data() + sizeof(unsigned int) + items_number * sizeof(OffsetGroupItem);
 		items->at(i).lowercase_word = string_begin + item.lowercase_word;
 		items->at(i).characteristics = (Characteristic*)string_begin + item.characteristics;
 		items->at(i).spelling = string_begin + item.spelling;

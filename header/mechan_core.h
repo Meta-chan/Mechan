@@ -12,8 +12,6 @@ namespace mechan
 	private:
 		Mechan *_mechan	= nullptr;
 		bool _ok		= false;
-		std::uniform_int_distribution<unsigned int> _distribution;
-		std::default_random_engine _engine;
 
 		bool _intersect(const std::vector<unsigned int> *a, const std::vector<unsigned int> *b) const noexcept;
 

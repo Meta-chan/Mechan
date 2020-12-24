@@ -23,6 +23,7 @@ bool mechan::DialogParser::parse()
 	if (_text == nullptr) return false;
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::neww, nullptr);
 	if (!_dialog->ok()) return false;
+	_dialog->set_ram_mode(true, true);
 
 	unsigned int i = 0;
 	std::string buffer;
@@ -34,7 +35,7 @@ bool mechan::DialogParser::parse()
 		{
 			if (!buffer.empty())
 			{
-				ir::ConstBlock data((unsigned int)buffer.size(), buffer.c_str());
+				ir::ConstBlock data(buffer.c_str(), buffer.size());
 				_dialog->insert(i, data);
 				buffer.resize(0);
 			}
@@ -57,7 +58,7 @@ mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	//First try
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
-	if (_dialog->ok()) return;
+	if (_dialog->ok()) { _dialog->set_ram_mode(true, true); return; }
 	
 	//Second try
 	delete _dialog;
@@ -66,7 +67,11 @@ mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 		DialogParser parser;
 		parsed = parser.parse();
 	}
-	if (parsed) _dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
+	if (parsed)
+	{
+		_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
+		if (_dialog->ok()) _dialog->set_ram_mode(true, true);
+	}
 	else _dialog = nullptr;
 }
 
@@ -79,7 +84,7 @@ std::string mechan::Dialog::dialog(unsigned int i) const noexcept
 {
 	assert(ok());
 	ir::ConstBlock data;
-	if (_dialog->read(i, &data) == ir::ec::ok) return std::string((const char*)data.data, data.size);
+	if (_dialog->read(i, &data) == ir::ec::ok) return std::string((const char*)data.data(), data.size());
 	else return std::string();
 }
 

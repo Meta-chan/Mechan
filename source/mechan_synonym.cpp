@@ -25,15 +25,21 @@ namespace mechan
 	};
 }
 
-bool mechan::SynonymParser::_merge(const unsigned int *from, unsigned int fromsize, std::vector<unsigned int> *to) noexcept
+bool mechan::SynonymParser::_merge(const unsigned int *source, unsigned int source_size, std::vector<unsigned int> *dest) noexcept
 {
 	bool adding = false;
-	for (unsigned int i = 0; i < fromsize; i++)
+	for (unsigned int i = 0; i < source_size; i++)
 	{
 		bool match = false;
-		for (unsigned int j = 0; j < to->size(); j++)
+		unsigned int place_in_dest = dest->size();
+		for (unsigned int j = 0; j < dest->size(); j++)
 		{
-			if (from[i] == to->at(j))
+			if (source[i] < dest->at(j))
+			{
+				place_in_dest = j;
+				break;
+			}
+			else if (source[i] == dest->at(j))
 			{
 				match = true;
 				break;
@@ -41,7 +47,7 @@ bool mechan::SynonymParser::_merge(const unsigned int *from, unsigned int fromsi
 		}
 		if (!match)
 		{
-			to->push_back(from[i]);
+			dest->insert(dest->begin() + place_in_dest, source[i]);
 			adding = true;
 		}
 	}
@@ -56,19 +62,19 @@ void mechan::SynonymParser::_extract_groups(const std::string lowercase_word) no
 
 void mechan::SynonymParser::_write_groups() noexcept
 {
-	ir::ConstBlock groups((unsigned int)_groups.size() * sizeof(unsigned int), _groups.data());
+	ir::ConstBlock groups(_groups.data(), _groups.size() * sizeof(unsigned int));
 
 	for (unsigned int i = 0; i < _words.size(); i++)
 	{
-		ir::ConstBlock keyword((unsigned int)_words[i].size(), _words[i].data());
+		ir::ConstBlock keyword(_words[i].data(), _words[i].size());
 		if (_word2exsyngroup->insert(keyword, groups, ir::Database::insert_mode::not_existing) == ir::ec::key_already_exists)
 		{
 			ir::ConstBlock old_groups;
 			_word2exsyngroup->read(keyword, &old_groups);
 			_buffer = _groups;
-			if (_merge((unsigned int*)old_groups.data, old_groups.size / sizeof(unsigned int), &_buffer))
+			if (_merge((unsigned int*)old_groups.data(), (unsigned int)old_groups.size() / sizeof(unsigned int), &_buffer))
 			{
-				ir::ConstBlock merged_groups((unsigned int)_buffer.size() * sizeof(unsigned int), _buffer.data());
+				ir::ConstBlock merged_groups(_buffer.data(), _buffer.size() * sizeof(unsigned int));
 				_word2exsyngroup->insert(keyword, merged_groups);
 			}
 		}
@@ -181,12 +187,12 @@ bool mechan::Synonym::ok() const noexcept
 
 void mechan::Synonym::extended_syngroup(const std::string lowercase_word , std::vector<unsigned int> *groups) const noexcept
 {
-	ir::ConstBlock keyword((unsigned int)lowercase_word.size(), lowercase_word.c_str());
+	ir::ConstBlock keyword(lowercase_word.c_str(), lowercase_word.size());
 	ir::ConstBlock groups_data;
 	if (_word2exsyngroup->read(keyword, &groups_data) == ir::ec::ok)
 	{
-		groups->resize(groups_data.size / sizeof(unsigned int));
-		memcpy(&groups->at(0), groups_data.data, groups_data.size);
+		groups->resize(groups_data.size() / sizeof(unsigned int));
+		memcpy(&groups->at(0), groups_data.data(), groups_data.size());
 	}
 	else groups->resize(0);
 }
