@@ -53,7 +53,7 @@ void mechan::Neuro::_unroll_message(
 mechan::Neuro::Neuro(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	_generator.seed((unsigned int)time(nullptr));
-	_distribution = new std::uniform_int_distribution<unsigned int>(mechan->dialog()->count());
+	_distribution = new std::uniform_int_distribution<unsigned int>(0, mechan->dialog()->count() - 1);
 	_neuro = new ir::Neuro<double>(WIDE_MECHAN_DIR "\\data\\neuro", nullptr);
 	if (!_neuro->ok())
 	{
@@ -61,17 +61,12 @@ mechan::Neuro::Neuro(Mechan *mechan) noexcept : _mechan(mechan)
 		unsigned int layers[4] = { 2 * message_size, 2000, 2000, 1 };
 		_neuro = new ir::Neuro<double>(4, layers, 0.1, nullptr);
 	}
-	if (_neuro->ok()) _neuro->set_coefficient(0.1);
+	if (_neuro->ok()) { _neuro->set_coefficient(0.1); _last_save = clock(); }
 }
 
 bool mechan::Neuro::ok() const noexcept
 {
 	return _neuro != nullptr && _neuro->ok();
-}
-
-void mechan::Neuro::save() const noexcept
-{
-	_neuro->save(WIDE_MECHAN_DIR);
 }
 
 void mechan::Neuro::train() noexcept
@@ -80,7 +75,7 @@ void mechan::Neuro::train() noexcept
 	unsigned int nmessage = (*_distribution)(_generator);
 	std::string question = _mechan->dialog()->dialog(nmessage);
 	if (question.empty()) return;
-	std::string answer = _mechan->dialog()->dialog(nmessage);
+	std::string answer = _mechan->dialog()->dialog(nmessage + 1);
 	if (answer.empty()) return;
 
 	std::vector<std::string> parsed;
@@ -98,7 +93,7 @@ void mechan::Neuro::train() noexcept
 
 		char message[512];
 		sprintf(message, "Positive training: %lf", _neuro->get_output()->at(0));
-		_mechan->print_train_log(message);
+		_mechan->print_event_log(message);
 	}
 	else while (true)
 	{
@@ -115,8 +110,15 @@ void mechan::Neuro::train() noexcept
 
 			char message[512];
 			sprintf(message, "Negative training: %lf", _neuro->get_output()->at(0));
-			_mechan->print_train_log(message);
+			_mechan->print_event_log(message);
 		}
+	}
+
+	//saving
+	if (clock() - _last_save > 3600 * CLOCKS_PER_SEC)
+	{
+		_neuro->save(WIDE_MECHAN_DIR "\\data\\neuro");
+		_last_save = clock();
 	}
 }
 

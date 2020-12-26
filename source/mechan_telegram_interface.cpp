@@ -7,9 +7,7 @@
 #define MECHAN_SECOND_NAME	""
 #define MECHAN_PASSWORD		""
 
-#include "../header/mechan_directory.h"
-#include "../header/mechan_telegram_interface.h"
-#include "../header/mechan.h"
+#include "../header/mechan_socket.h"
 
 #include <td/telegram/Client.h>
 #include <td/telegram/Log.h>
@@ -25,7 +23,7 @@
 
 namespace mechan
 {
-	class TelegramInterface : public Interface
+	class TelegramInterface
 	{
 	private:
 		enum Status
@@ -46,27 +44,21 @@ namespace mechan
 		void _process_update_new_message_text(TDP(message) message);
 		void _process_update_new_message(TDP(updateNewMessage) update_new_message);
 		void _process_message(TDP(Object) object);
-	
+		bool _send(const std::string message, Client::Address address);
+		bool _receive();
+		
 		Status _status							= Status::pendling;
-		bool _autorization_failed				= false;
 		std::int64_t _request_number			= 1;
 		std::unique_ptr<::td::Client> _client	= nullptr;
 		std::vector<::td::Client::Response> _responses;
-		ReadResult _read_result;
+		Client _mechan_client;
+		Client::ReceiveResult _receive_result;
 
 	public:		
-		TelegramInterface();
-		bool ok()												const noexcept;
-		Interface::ID id()										const noexcept;
-		bool write(const std::string message, Address address)	noexcept;
-		ReadResult read()										noexcept;
+		TelegramInterface()										noexcept;
+		int loop()												noexcept;
 		~TelegramInterface()									noexcept;
 	};
-}
-
-mechan::Interface *mechan::new_telegram_interface() noexcept
-{
-	return new TelegramInterface;
 }
 
 TDP(Object) mechan::TelegramInterface::_call(TDP(Function) function)
@@ -183,16 +175,16 @@ void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAu
 void mechan::TelegramInterface::_process_update_new_message_text(TDP(message) message)
 {
 	TDP(messageText) messagetext = TDMOVEAS(messageText, message->content_);
-	_read_result.ok = true;
-	_read_result.message = messagetext->text_->text_;
-	_read_result.address.interface_id = Interface::ID::telegram;
-	_read_result.address.chat_id = message->chat_id_;
+	_receive_result.ok = true;
+	_receive_result.message = messagetext->text_->text_;
+	_receive_result.address.interface_id = Interface::ID::telegram;
+	_receive_result.address.chat_id = message->chat_id_;
 	if (message->sender_->get_id() == td::td_api::messageSenderUser::ID)
 	{
 		TDP(messageSenderUser) message_sender_user = TDMOVEAS(messageSenderUser, message->sender_);
-		_read_result.address.user_id = message_sender_user->user_id_;
+		_receive_result.address.user_id = message_sender_user->user_id_;
 	}
-	else _read_result.address.user_id = 0;
+	else _receive_result.address.user_id = 0;
 }
 
 void mechan::TelegramInterface::_process_update_new_message(TDP(updateNewMessage) update_new_message)
@@ -237,17 +229,7 @@ mechan::TelegramInterface::TelegramInterface()
 	}
 }
 
-bool mechan::TelegramInterface::ok() const noexcept
-{
-	return _status == Status::authorized;
-}
-
-mechan::Interface::ID mechan::TelegramInterface::id() const noexcept
-{
-	return Interface::ID::telegram;
-}
-
-bool mechan::TelegramInterface::write(const std::string message, Address address) noexcept
+bool mechan::TelegramInterface::_send(const std::string message, Client::Address address)
 {
 	//Sending message
 	TDP(sendMessage) sendmessage = TDMAKE(sendMessage)();
@@ -263,21 +245,20 @@ bool mechan::TelegramInterface::write(const std::string message, Address address
 	return result != nullptr;
 }
 
-mechan::Interface::ReadResult mechan::TelegramInterface::read() noexcept
+void mechan::TelegramInterface::_receive()
 {
-	_read_result.ok = false;
-	_read_result.address.interface_id = Interface::ID::telegram;
-	_read_result.address.chat_id = 0;
-	_read_result.address.user_id = 0;
-	_read_result.message = "";
+	//Processing all incoming messages and looking on _receive_result
+	_receive_result.ok = false;
+	_receive_result.address.chat_id = 0;
+	_receive_result.address.user_id = 0;
+	_receive_result.message = "";
 
-	clock_t c = clock();
 	while (true)
 	{
 		td::Client::Response response;
 		if (_responses.empty())
 		{
-			response = _client->receive(0.5);
+			response = _client->receive(std::numberic_limits<double>::infinity());
 		}
 		else
 		{
@@ -285,7 +266,32 @@ mechan::Interface::ReadResult mechan::TelegramInterface::read() noexcept
 			_responses.erase(_responses.begin());
 		}
 		if (response.object != nullptr) _process_message(TDMOVE(response.object));
-		if (_read_result.ok || (c - clock() / CLOCKS_PER_SEC)) return _read_result;
+		if (_receive_result.ok) break;
+	}
+}
+
+int mechan::TelegramInterface::loop()
+{
+	if (!_mechan_client.ok() || _status != Status::authorized) return 1;
+	ir_utf_init();
+	ir_utf_utf8.init();
+	ir_utf_1251.init();
+	while (true)
+	{
+		_receive();
+		std::string question;
+		question.resize(ir_utf_recode(&ir_utf_utf8, _receive_result.message.data(), ' ', &ir_utf_1251, nullptr));
+		ir_utf_recode(&ir_utf_utf8, _receive_result.message.data(), ' ', &ir_utf_1251, &question[0]);
+		_mechan_client.send(question, _receive_result.address);
+		while (true)
+		{
+			_receive_result = client.receive();
+			if (_receive_result.ok) break;
+		}
+		std::string answer8;
+		answer8.resize(ir_utf_recode(&ir_utf_1251, _receive_result.message.data(), ' ', &ir_utf_utf8, nullptr));
+		ir_utf_recode(&ir_utf_1251, _receive_result.message.data(), ' ', &ir_utf_utf8, &answer8[0]);
+		_send(answer8, _receive_result.address);
 	}
 }
 
@@ -293,57 +299,15 @@ mechan::TelegramInterface::~TelegramInterface()
 {
 }
 
-#else
-
-#include "../header/mechan_telegram_interface.h"
-
-namespace mechan
+int _main()
 {
-	class TelegramInterface : public Interface
-	{
-	public:
-		TelegramInterface()										noexcept;
-		bool ok()												const noexcept;
-		Interface::ID id()										const noexcept;
-		bool write(const std::string message, Address address)	noexcept;
-		ReadResult read()										noexcept;
-		~TelegramInterface()									noexcept;
-	};
+	mechan::TelegramInterface telegram;
+	return telegram.loop();
 }
 
-mechan::Interface *mechan::new_telegram_interface() noexcept
+int main()
 {
-	return new TelegramInterface;
-}
-
-mechan::TelegramInterface::TelegramInterface() noexcept
-{
-}
-
-bool mechan::TelegramInterface::ok() const noexcept
-{
-	return true;
-}
-
-mechan::Interface::ID mechan::TelegramInterface::id() const noexcept
-{
-	return ID::telegram;
-}
-
-bool mechan::TelegramInterface::write(const std::string message, Address address) noexcept
-{
-	return false;
-}
-
-mechan::Interface::ReadResult mechan::TelegramInterface::read() noexcept
-{
-	ReadResult result;
-	result.ok = false;
-	return result;
-}
-
-mechan::TelegramInterface::~TelegramInterface() noexcept
-{
+	return _main();
 }
 
 #endif

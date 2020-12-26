@@ -13,7 +13,7 @@ bool mechan::Core::_intersect(const std::vector<unsigned int> *a, const std::vec
 		if (ia == a->size() || ib == b->size()) return false;
 		else if (a->at(ia) == b->at(ib)) return true;
 		else if (a->at(ia) < b->at(ib)) ia++;
-		else ib++
+		else ib++;
 	}
 	return false;
 }

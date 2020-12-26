@@ -2,6 +2,7 @@
 
 #include <string>
 #include <random>
+#include <time.h>
 #include <ir_neuro.h>
 
 namespace mechan
@@ -19,6 +20,7 @@ namespace mechan
 		Mechan *_mechan												= nullptr;
 		std::default_random_engine _generator;
 		std::uniform_int_distribution<unsigned int> *_distribution	= nullptr;
+		clock_t _last_save											= 0;
 		ir::Neuro<double> *_neuro									= nullptr;
 		
 		void _unroll_char(char c, double v[33])								noexcept;
@@ -30,7 +32,6 @@ namespace mechan
 	public:
 		Neuro(Mechan *mechan)												noexcept;
 		bool ok()															const noexcept;
-		void save()															const noexcept;
 		void train()														noexcept;
 		double qestion_answer(
 			const std::vector<std::string> *question, char question_type,

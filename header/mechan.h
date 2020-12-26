@@ -14,7 +14,7 @@ namespace mechan
 	{
 	private:
 		Server::Address _event_log_address;
-		Server::Address _neuro_log_address;
+		bool _event_log_hook = false;
 
 		Server _server;
 		Dialog _dialog;
@@ -30,7 +30,6 @@ namespace mechan
 		Synonym *synonym()								noexcept;
 		Neuro *neuro()									noexcept;
 		void print_event_log(const std::string string)	noexcept;
-		void print_train_log(const std::string string)	noexcept;
 		int main()										noexcept;
 	};
 }

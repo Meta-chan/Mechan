@@ -293,7 +293,9 @@ bool mechan::MorphologyParser::parse() noexcept
 			_group++;
 		}
 	}
-
+	_mechan->print_event_log("Optimizing morphology database");
+	_word2group->optimize();
+	_group2data->optimize();
 	return true;
 }
 

@@ -1,4 +1,4 @@
-#include "../header/mechan_dialog.h"
+#include "../header/mechan.h"
 #include "../header/mechan_directory.h"
 #include <assert.h>
 #include <stdio.h>
@@ -8,22 +8,28 @@ namespace mechan
 	class DialogParser
 	{
 	private:
+		Mechan *_mechan				= nullptr;
 		FILE *_text					= nullptr;
 		ir::N2STDatabase *_dialog	= nullptr;
 
 	public:
-		bool parse();
-		~DialogParser();
+		DialogParser(Mechan *mechan)	noexcept;	
+		bool parse()					noexcept;
+		~DialogParser()					noexcept;
 	};
 }
 
-bool mechan::DialogParser::parse()
+mechan::DialogParser::DialogParser(Mechan *mechan) noexcept : _mechan(mechan)
+{}
+
+bool mechan::DialogParser::parse() noexcept
 {
-	_text = fopen(MECHAN_DIR "\\data\\dialog.txt", "r");
-	if (_text == nullptr) return false;
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::neww, nullptr);
 	if (!_dialog->ok()) return false;
 	_dialog->set_ram_mode(true, true);
+	_text = fopen(MECHAN_DIR "\\data\\dialog.txt", "r");
+	if (_text == nullptr) return false;
+	_mechan->print_event_log("Dialog file found");
 
 	unsigned int i = 0;
 	std::string buffer;
@@ -48,7 +54,7 @@ bool mechan::DialogParser::parse()
 	return true;
 }
 
-mechan::DialogParser::~DialogParser()
+mechan::DialogParser::~DialogParser() noexcept
 {
 	if (_dialog != nullptr) delete _dialog;
 	if (_text != nullptr) fclose(_text);
@@ -58,19 +64,27 @@ mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	//First try
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
-	if (_dialog->ok()) { _dialog->set_ram_mode(true, true); return; }
+	if (_dialog->ok())
+	{
+		_mechan->print_event_log("Dialog database found");
+		_dialog->set_ram_mode(true, true); return;
+	}
 	
 	//Second try
 	delete _dialog;
 	bool parsed = false;
 	{
-		DialogParser parser;
+		DialogParser parser(mechan);
 		parsed = parser.parse();
 	}
 	if (parsed)
 	{
 		_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
-		if (_dialog->ok()) _dialog->set_ram_mode(true, true);
+		if (_dialog->ok())
+		{
+			_mechan->print_event_log("Dialog database found");
+			_dialog->set_ram_mode(true, true);
+		}
 	}
 	else _dialog = nullptr;
 }

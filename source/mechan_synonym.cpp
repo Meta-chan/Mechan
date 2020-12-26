@@ -14,25 +14,25 @@ namespace mechan
 		std::vector<unsigned int> _groups;
 		std::vector<std::string> _words;
 
-		static bool _merge(const unsigned int *from, unsigned int fromsize, std::vector<unsigned int> *to) noexcept;
-		void _extract_groups(const std::string lowercase_word) noexcept;
-		void _write_groups() noexcept;
+		static bool _merge(const unsigned int *source, size_t source_size, std::vector<unsigned int> *dest)	noexcept;
+		void _extract_groups(const std::string lowercase_word)												noexcept;
+		void _write_groups()																				noexcept;
 
 	public:
-		SynonymParser(Mechan *mechan);
-		bool parse() noexcept;
-		~SynonymParser() noexcept;
+		SynonymParser(Mechan *mechan)																		noexcept;
+		bool parse()																						noexcept;
+		~SynonymParser()																					noexcept;
 	};
 }
 
-bool mechan::SynonymParser::_merge(const unsigned int *source, unsigned int source_size, std::vector<unsigned int> *dest) noexcept
+bool mechan::SynonymParser::_merge(const unsigned int *source, size_t source_size, std::vector<unsigned int> *dest) noexcept
 {
 	bool adding = false;
-	for (unsigned int i = 0; i < source_size; i++)
+	for (size_t i = 0; i < source_size; i++)
 	{
 		bool match = false;
-		unsigned int place_in_dest = dest->size();
-		for (unsigned int j = 0; j < dest->size(); j++)
+		size_t place_in_dest = dest->size();
+		for (size_t j = 0; j < dest->size(); j++)
 		{
 			if (source[i] < dest->at(j))
 			{
@@ -81,7 +81,7 @@ void mechan::SynonymParser::_write_groups() noexcept
 	}
 }
 
-mechan::SynonymParser::SynonymParser(Mechan *mechan) : _mechan(mechan)
+mechan::SynonymParser::SynonymParser(Mechan *mechan) noexcept : _mechan(mechan)
 {}
 
 bool mechan::SynonymParser::parse() noexcept
@@ -142,6 +142,8 @@ bool mechan::SynonymParser::parse() noexcept
 	}
 	if (!_words.empty()) _extract_groups(_words.back());
 	if (!_groups.empty()) _write_groups();
+	_mechan->print_event_log("Optimizing synonym database");
+	_word2exsyngroup->optimize();
 	return true;
 }
 

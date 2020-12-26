@@ -1,6 +1,5 @@
 #include "../header/mechan.h"
 #include "../header/mechan_directory.h"
-#include <time.h>
 
 mechan::Mechan::Mechan() noexcept :
 	_dialog(this),
@@ -32,10 +31,13 @@ mechan::Neuro *mechan::Mechan::neuro() noexcept
 }
 
 void mechan::Mechan::print_event_log(const std::string string) noexcept
-{}
-
-void mechan::Mechan::print_train_log(const std::string string) noexcept
-{}
+{
+	printf("%s\n", string.data());
+	if (_event_log_hook)
+	{
+		if (!_server.send(string, _event_log_address)) _event_log_hook = false;
+	}
+}
 
 int mechan::Mechan::main() noexcept
 {
@@ -46,7 +48,6 @@ int mechan::Mechan::main() noexcept
 	|| !_dialog.ok()
 	|| !_core.ok()) return 1;
 
-	clock_t last_save = clock();
 	while (true)
 	{
 		//Reading and answering
@@ -54,16 +55,22 @@ int mechan::Mechan::main() noexcept
 		{
 			Server::ReceiveResult result = _server.receive();
 			if (!result.ok) break;
-			else if (result.message == "!shutdown") return 0;
-			else if (result.message == "!eventlog") _event_log_address = result.address;
-			else if (result.message == "!neurolog") _neuro_log_address = result.address;
+			else if (result.message == "!shutdown")
+			{
+				print_event_log("Shutdown...");
+				return 0;
+			}
+			else if (result.message == "!eventlog")
+			{
+				_event_log_address = result.address;
+				_event_log_hook = true;
+			}
 			else _server.send(_core.answer(result.message), result.address);
 		}
 
 		//Running idle
 		clock_t c = clock();
 		while (clock() - c < 10 * CLOCKS_PER_SEC) _neuro.train();
-		if (last_save - clock() > 3600 * CLOCKS_PER_SEC) { _neuro.save(); last_save = clock(); }
 	}
 
 	return 0;
