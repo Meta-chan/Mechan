@@ -72,7 +72,8 @@ void mechan::MorphologyParser::_skip_space_asterisk() noexcept
 	while (true)
 	{
 		char c;
-		assert(fread(&c, 1, 1, _morphology) != 0);
+		bool read = (fread(&c, 1, 1, _morphology) != 0);
+		assert(read);
 		if (c == ' ') {}
 		else if (c == '*') _deprecated = true;
 		else
@@ -140,7 +141,8 @@ void mechan::MorphologyParser::_read_word(bool spelling) noexcept
 	while (true)
 	{
 		char c;
-		assert(fread(&c, 1, 1, _morphology) != 0);
+		bool read = fread(&c, 1, 1, _morphology) != 0;
+		assert(read);
 		if (c == '|') break;
 		else if (spelling) _items_data.push_back(c);
 		else _items_data.push_back(lowercase(c));
@@ -212,7 +214,8 @@ void mechan::MorphologyParser::_read_characteristics() noexcept
 	while (true)
 	{
 		char c;
-		assert(fread(&c, 1, 1, _morphology) != 0);
+		bool read = fread(&c, 1, 1, _morphology) != 0;
+		assert(read);
 		if (c == ' ')
 		{
 			_add_characteristic();
@@ -366,7 +369,8 @@ void mechan::Morphology::word_info(const std::string lowercase_word, std::vector
 void mechan::Morphology::group_info(unsigned int group, std::vector<GroupItem> *items) const noexcept
 {
 	ir::ConstBlock data;
-	assert(_group2data->read(group, &data) == ir::ec::ok);
+	bool read = _group2data->read(group, &data) == ir::ec::ok;
+	assert(read);
 	unsigned int items_number;
 	memcpy(&items_number, data.data(), sizeof(unsigned int));
 	items->resize(items_number);

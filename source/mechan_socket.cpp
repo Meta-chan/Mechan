@@ -2,7 +2,7 @@
 #include <ws2tcpip.h>
 #include <assert.h>
 
-#define SERVER_IP "127.0.0.1"
+#define SERVER_IP "192.168.0.4"
 #define SERVER_PORT 30000
 
 mechan::Server::Server() noexcept
