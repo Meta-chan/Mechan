@@ -59,9 +59,9 @@ mechan::Neuro::Neuro(Mechan *mechan) noexcept : _mechan(mechan)
 	{
 		delete _neuro;
 		unsigned int layers[4] = { 2 * message_size, 2000, 2000, 1 };
-		_neuro = new ir::Neuro<double>(4, layers, 0.005, nullptr);
+		_neuro = new ir::Neuro<double>(4, layers, 0.01, nullptr);
 	}
-	if (_neuro->ok()) { _neuro->set_coefficient(0.1); _last_save = clock(); }
+	if (_neuro->ok()) { _neuro->set_coefficient(0.025); _last_save = clock(); }
 }
 
 bool mechan::Neuro::ok() const noexcept
