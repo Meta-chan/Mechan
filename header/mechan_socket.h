@@ -1,12 +1,22 @@
 #pragma once
 
-#include <WinSock2.h>
-#include <Ws2def.h>
+#ifdef _WIN32
+	#include <WinSock2.h>
+	#include <Ws2def.h>
+#else
+	#include <netinet/in.h>
+#endif
+
 #include <string>
 #include <vector>
 
 namespace mechan
 {
+	#ifndef _WIN32
+		typedef int SOCKET;
+	#endif
+
+
 	class Server
 	{
 	private:

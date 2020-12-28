@@ -8,6 +8,7 @@
 #define MECHAN_PASSWORD		""
 
 #include "../header/mechan_socket.h"
+#include "../header/mechan_directory.h"
 
 #include <td/telegram/Client.h>
 #include <td/telegram/Log.h>
@@ -15,6 +16,12 @@
 #include <td/telegram/td_api.hpp>
 
 #include <time.h>
+#include <stdio.h>
+#include <limits>
+#include <chrono>
+#include <thread>
+#define IR_IMPLEMENT
+#include <ir_utf.h>
 
 #define TDP(TDCLASSNAME) ::td::td_api::object_ptr<::td::td_api::TDCLASSNAME>
 #define TDMOVE(TDOBJECT) ::td::td_api::move_object_as<decltype(TDOBJECT)::element_type>(TDOBJECT)
@@ -45,7 +52,7 @@ namespace mechan
 		void _process_update_new_message(TDP(updateNewMessage) update_new_message);
 		void _process_message(TDP(Object) object);
 		bool _send(const std::string message, Client::Address address);
-		bool _receive();
+		void _receive();
 		
 		Status _status							= Status::pendling;
 		std::int64_t _request_number			= 1;
@@ -55,9 +62,9 @@ namespace mechan
 		Client::ReceiveResult _receive_result;
 
 	public:		
-		TelegramInterface()										noexcept;
-		int loop()												noexcept;
-		~TelegramInterface()									noexcept;
+		TelegramInterface();
+		int loop();
+		~TelegramInterface();
 	};
 }
 
@@ -89,7 +96,7 @@ TDP(Object) mechan::TelegramInterface::_call(TDP(Function) function)
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_parameters()
 {
-	mechan->console_interface()->write("Processing authorizationStateWaitParameters");
+	printf("Processing authorizationStateWaitParameters\n");
 	TDP(tdlibParameters) parameters = TDMAKE(tdlibParameters)();
 	parameters->database_directory_ = MECHAN_DIR;
 	parameters->use_message_database_ = true;
@@ -98,7 +105,7 @@ TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_pa
 	parameters->api_hash_ = MECHAN_API_HASH;
 	parameters->system_language_code_ = "en";
 	parameters->device_model_ = "Desktop";
-	parameters->system_version_ = "Windows 8";
+	parameters->system_version_ = "Tiny Core Linux 11";
 	parameters->application_version_ = "1.0";
 	parameters->enable_storage_optimizer_ = true;
 	return _call(TDMAKE(setTdlibParameters)(TDMOVE(parameters)));
@@ -106,34 +113,35 @@ TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_pa
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_encryption_key()
 {
-	mechan->console_interface()->write("Processing authorizationStateWaitEncryptionKey");
+	printf("Processing authorizationStateWaitEncryptionKey\n");
 	return _call(TDMAKE(checkDatabaseEncryptionKey)(""));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_phone_number()
 {
-	mechan->console_interface()->write("Processing authorizationStateWaitPhoneNumber");
+	printf("Processing authorizationStateWaitPhoneNumber\n");
 	TDP(phoneNumberAuthenticationSettings) settings = TDMAKE(phoneNumberAuthenticationSettings)(true, false, false);
 	return _call(TDMAKE(setAuthenticationPhoneNumber)(MECHAN_PHONE, TDMOVE(settings)));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_code()
 {
-	mechan->console_interface()->write("Processing authorizationStateWaitCode");
-	mechan->console_interface()->write("Waiting confirmation code");
-	ReadResult result = mechan->console_interface()->read();
-	return _call(TDMAKE(checkAuthenticationCode)(result.message));
+	printf("Processing authorizationStateWaitCode\n");
+	printf("Waiting confirmation code\n");
+	char code[64];
+	scanf("%64s", code);
+	return _call(TDMAKE(checkAuthenticationCode)(code));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_registration()
 {
-	mechan->console_interface()->write("Processing authorizationStateWaitRegistration");
+	printf("Processing authorizationStateWaitRegistration\n");
 	return _call(TDMAKE(registerUser)(MECHAN_FIRST_NAME, MECHAN_SECOND_NAME));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_password()
 {
-	mechan->console_interface()->write("Processing authorizationStateWaitPassword");
+	printf("Processing authorizationStateWaitPassword\n");
 	return _call(TDMAKE(checkAuthenticationPassword)(MECHAN_PASSWORD));
 }
 
@@ -166,7 +174,7 @@ void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAu
 		break;
 
 	case td::td_api::authorizationStateReady::ID:
-		mechan->console_interface()->write("Got authorization");
+		printf("Got authorization\n");
 		_status = Status::authorized;
 		break;
 	}
@@ -174,17 +182,22 @@ void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAu
 
 void mechan::TelegramInterface::_process_update_new_message_text(TDP(message) message)
 {
-	TDP(messageText) messagetext = TDMOVEAS(messageText, message->content_);
-	_receive_result.ok = true;
-	_receive_result.message = messagetext->text_->text_;
-	_receive_result.address.interface_id = Interface::ID::telegram;
-	_receive_result.address.chat_id = message->chat_id_;
+	//Setting user_id and quitting if sended by myself
 	if (message->sender_->get_id() == td::td_api::messageSenderUser::ID)
 	{
 		TDP(messageSenderUser) message_sender_user = TDMOVEAS(messageSenderUser, message->sender_);
+		TDP(Object) object = _call(TDMAKE(getUser)(message_sender_user->user_id_));
+		TDP(user) user = TDMOVEAS(user, object);
+		if (user->phone_number_ != "" && strstr(MECHAN_PHONE, user->phone_number_.data()) != nullptr) return;
 		_receive_result.address.user_id = message_sender_user->user_id_;
 	}
 	else _receive_result.address.user_id = 0;
+	
+	//Setting other fields
+	TDP(messageText) message_text = TDMOVEAS(messageText, message->content_);
+	_receive_result.message = message_text->text_->text_;
+	_receive_result.address.chat_id = message->chat_id_;
+	_receive_result.ok = true;	
 }
 
 void mechan::TelegramInterface::_process_update_new_message(TDP(updateNewMessage) update_new_message)
@@ -213,15 +226,21 @@ void mechan::TelegramInterface::_process_message(TDP(Object) object)
 
 mechan::TelegramInterface::TelegramInterface()
 {
+	if (!_mechan_client.ok()) return;
+
+	td::Log::set_verbosity_level(1);
+	_client = std::make_unique<::td::Client>();
 	while (_status == Status::pendling)
 	{
 		td::Client::Response response;
-		if (_responses.empty())
+		if (_responses.size() == 0)
 		{
-			response = _client->receive(INFINITY);
+			printf("Waiting for response\n");
+			response = _client->receive(std::numeric_limits<double>::infinity());
 		}
 		else
 		{
+			printf("Picking response from queue\n");
 			response = std::move(_responses[0]);
 			_responses.erase(_responses.begin());
 		}
@@ -233,7 +252,7 @@ bool mechan::TelegramInterface::_send(const std::string message, Client::Address
 {
 	//Sending message
 	TDP(sendMessage) sendmessage = TDMAKE(sendMessage)();
-	sendmessage->chat_id_ = 0;
+	sendmessage->chat_id_ = address.chat_id;
 	sendmessage->reply_to_message_id_ = 0;
 	sendmessage->options_ = TDMAKE(messageSendOptions)();
 	sendmessage->options_->disable_notification_ = false;
@@ -258,7 +277,7 @@ void mechan::TelegramInterface::_receive()
 		td::Client::Response response;
 		if (_responses.empty())
 		{
-			response = _client->receive(std::numberic_limits<double>::infinity());
+			response = _client->receive(std::numeric_limits<double>::infinity());
 		}
 		else
 		{
@@ -279,19 +298,23 @@ int mechan::TelegramInterface::loop()
 	while (true)
 	{
 		_receive();
+		printf("Got message\n");
 		std::string question;
 		question.resize(ir_utf_recode(&ir_utf_utf8, _receive_result.message.data(), ' ', &ir_utf_1251, nullptr));
 		ir_utf_recode(&ir_utf_utf8, _receive_result.message.data(), ' ', &ir_utf_1251, &question[0]);
 		_mechan_client.send(question, _receive_result.address);
+		if (question == "!shutdown") return 0;
 		while (true)
 		{
-			_receive_result = client.receive();
+			_receive_result = _mechan_client.receive();
 			if (_receive_result.ok) break;
+			else std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 		std::string answer8;
 		answer8.resize(ir_utf_recode(&ir_utf_1251, _receive_result.message.data(), ' ', &ir_utf_utf8, nullptr));
 		ir_utf_recode(&ir_utf_1251, _receive_result.message.data(), ' ', &ir_utf_utf8, &answer8[0]);
 		_send(answer8, _receive_result.address);
+		printf("Sent response\n");
 	}
 }
 
