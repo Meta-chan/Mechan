@@ -7,7 +7,7 @@
 #include "../header/mechan_directory.h"
 #include "../header/mechan_lowercase.h"
 #define IR_IMPLEMENT
-#include <ir_utf.h>
+#include <ir_codec.h>
 #include <ir_container/ir_quiet_vector.h>
 #include <ir_resource/ir_hinternet_resource.h>
 #include <vector>
@@ -16,10 +16,18 @@
 
 class DialogDownloader
 {
+public:
+	enum class Resource
+	{
+		ficbook_net,
+		fanfics_me
+	};
+
 private:
 	enum class State
 	{
 		plain_text_wait_line,
+		tag_wait_close,
 		plain_text_wait_dash,
 		direct_speech_wait_dot,
 		direct_speech_wait_dash,
@@ -37,12 +45,15 @@ private:
 	static const char empty1 = (char)0xA0;
 	static const char empty2 = (char)0xAD;
 	static const char empty3 = (char)0x98;
+	static const char openq = (char)0xAB;
+	static const char closeq = (char)0xBB;
 
 	ir::QuietVector<char> _page_utf8;
 	ir::QuietVector<char> _page_cp1251;
 	std::vector<std::string> _dialog;
 	FILE *_file = nullptr;
-	
+	Resource _resource;
+
 	bool _request_new_dialog = true;
 	bool _request_new_message = true;
 	State _state = State::plain_text_wait_line;
@@ -64,6 +75,7 @@ private:
 	void _author_speech_wait_dot(char c);
 	void _author_speech_wait_dash(char c);
 	void _corrupred_wait_line(char c);
+	void _tad_wait_close(char c);
 	void _parse();
 	bool _download_page(const char *object);
 	bool _contains(const char *word, bool exact = false);
@@ -72,7 +84,7 @@ private:
 	void _write();
 
 public:
-	DialogDownloader();
+	DialogDownloader(Resource resource);
 	void download();
 	~DialogDownloader();
 };
@@ -85,7 +97,9 @@ bool DialogDownloader::_is_edge_symbol(char c)
 		c == '\r' ||
 		c == '\t' ||
 		c == ndash ||
-		c == mdash);
+		c == mdash ||
+		c == closeq||
+		c == openq);
 }
 
 bool DialogDownloader::_is_repeated_symbol(char c)
@@ -128,6 +142,11 @@ void DialogDownloader::_plain_text_wait_line(char c)
 {
 	switch (c)
 	{
+	case '<':
+		_state = State::tag_wait_close;
+		_request_new_message = true;
+		break;
+
 	case '\n':
 	case '\r':
 		_state = State::plain_text_wait_dash;
@@ -140,6 +159,11 @@ void DialogDownloader::_plain_text_wait_dash(char c)
 {
 	switch (c)
 	{
+	case '<':
+		_state = State::tag_wait_close;
+		_request_new_message = true;
+		break;
+	
 	case '\n':
 	case '\r':
 	case '\t':
@@ -162,6 +186,12 @@ void DialogDownloader::_direct_speech_wait_dot(char c)
 {
 	switch (c)
 	{
+
+	case '<':
+		_state = State::tag_wait_close;
+		_request_new_message = true;
+		break;
+	
 	case '.':
 	case ellipsis:
 	case ',':
@@ -193,6 +223,12 @@ void DialogDownloader::_direct_speech_wait_dash(char c)
 {
 	switch (c)
 	{
+
+	case '<':
+		_state = State::tag_wait_close;
+		_request_new_message = true;
+		break;
+	
 	case '.':
 	case ellipsis:
 	case ',':
@@ -230,6 +266,11 @@ void DialogDownloader::_author_speech_wait_dot(char c)
 {
 	switch (c)
 	{
+	case '<':
+		_state = State::tag_wait_close;
+		_request_new_message = true;
+		break;
+
 	case '.':
 	case 0x85:
 	case ',':
@@ -256,6 +297,11 @@ void DialogDownloader::_author_speech_wait_dash(char c)
 {
 	switch (c)
 	{
+	case '<':
+		_state = State::tag_wait_close;
+		_request_new_message = true;
+		break;
+
 	case '.':
 	case ellipsis:
 	case ',':
@@ -291,6 +337,10 @@ void DialogDownloader::_corrupred_wait_line(char c)
 {
 	switch (c)
 	{
+	case '<':
+		_state = State::tag_wait_close;
+		break;
+
 	case '\n':
 	case '\r':
 		_state = State::plain_text_wait_dash;
@@ -298,6 +348,17 @@ void DialogDownloader::_corrupred_wait_line(char c)
 		_direct_count = 0;
 		_author_count = 0;
 		break;
+	}
+}
+
+void DialogDownloader::_tad_wait_close(char c)
+{
+	if (c == '>')
+	{
+		_state = State::plain_text_wait_dash;
+		_plain_count = 0;
+		_direct_count = 0;
+		_author_count = 0;
 	}
 }
 
@@ -314,12 +375,13 @@ void DialogDownloader::_parse()
 	while (*text != '\0')
 	{
 		char c;
-		if (strcmp(text, "<tab>") == 0) { c = '\t'; text += 5; }
+		if (strcmp(text, "&quot;")	== 0) { c = '\"';  text += 6; }
 		else if (*text == empty1 || *text == empty2 || *text == empty3) { c = ' '; text++; }
 		else { c = *text; text++; }
 
 		switch (_state)
 		{
+		case State::tag_wait_close: _tad_wait_close(c); break;
 		case State::plain_text_wait_line: _plain_text_wait_line(c); break;
 		case State::plain_text_wait_dash: _plain_text_wait_dash(c); break;
 		case State::direct_speech_wait_dot: _direct_speech_wait_dot(c); break;
@@ -334,7 +396,7 @@ void DialogDownloader::_parse()
 bool DialogDownloader::_download_page(const char *object)
 {
 	wchar_t object16[64];
-	ir_utf_recode(&ir_utf_utf8, object, ' ', &ir_utf_utf16, object16);
+	ir::Codec::recode<ir::Codec::UTF8, ir::Codec::UTF16>(object, ' ', object16);
 	#ifdef _WIN32
 		ir::HInternetResource get_request = WinHttpOpenRequest(_connection, L"GET", object16,
 			NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
@@ -353,7 +415,8 @@ bool DialogDownloader::_download_page(const char *object)
 		}
 	#else
 		char command[128];
-		strcpy(command, "wget ficbook.net");
+		if (_resource == Resource::ficbook_net) strcpy(command, "wget ficbook.net");
+		else strcpy(command, "wget fanfics.me");
 		strcat(command, object);
 		strcat(command, " -O -");
 
@@ -371,9 +434,18 @@ bool DialogDownloader::_download_page(const char *object)
 		pclose(pipe);
 	#endif
 
+	if (_page_utf8.size() < 1024) return false;
 	if (!_page_utf8.push_back('\0')) return false;
-	if (!_page_cp1251.resize(ir_utf_recode(&ir_utf_utf8, _page_utf8.data(), ' ', &ir_utf_1251, nullptr) + 1)) return false;
-	ir_utf_recode(&ir_utf_utf8, _page_utf8.data(), ' ', &ir_utf_1251, _page_cp1251.data());
+	if (_resource == Resource::ficbook_net)
+	{
+		if (strstr(_page_utf8.data(), "error404.svg") != nullptr) return false;
+	}
+	else
+	{
+		if (strstr(_page_utf8.data(), "HTTP ERROR 404") != nullptr) return false;
+	}
+	if (!_page_cp1251.resize(ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_page_utf8.data(), ' ', nullptr) + 1)) return false;
+	ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_page_utf8.data(), ' ', _page_cp1251.data());
 	if (!_page_cp1251.push_back('\0')) return false;
 	return true;
 }
@@ -400,23 +472,38 @@ bool DialogDownloader::_contains(const char *word, bool exact)
 
 bool DialogDownloader::_filter_head()
 {
-	if (!_contains("\xCE\xF0\xE8\xE4\xE6\xE8\xED\xE0\xEB", true))					return false;	//Ориджинал
 	//if (_contains("\xCF\xEE\xE3\xF1\xE5\xE4\xED\xE5\xE2\xED\xEE\xF1\xF2\xFC"))	return false;	//Повседневность
-	if (_contains("\xD4\xFD\xED\xF2\xE5\xE7\xE8", true))							return false;	//Фэнтези
-	if (!_contains("\xC3\xE5\xF2", true) && !_contains("\xC4\xE6\xE5\xED", true))	return false;	//Гет, Джен
-	if (_contains("\xD1\xF2\xE8\xF5\xE8", true))									return false;	//Стихи
-	if (_contains("\xD1\xEB\xFD\xF8", true))										return false;	//Слэш
-	if (_contains("\xD4\xE5\xEC\xF1\xEB\xFD\xF8", true))							return false;	//Фемслэш
-	if (_contains("\xCE\xEC\xE5\xE3\xE0\xE2\xE5\xF0\xF1", true))					return false;	//Омегаверс
-	if (_contains("PWP", true))		return false;
-	if (_contains("NC-17", true))	return false;
-	if (_contains("NC-21", true))	return false;
-	if (_contains("18+", true))		return false;
+	if (_resource == Resource::ficbook_net)
+	{
+		if (!_contains("\xCE\xF0\xE8\xE4\xE6\xE8\xED\xE0\xEB", true))					return false;	//Ориджинал
+		if (_contains("\xD1\xF2\xE0\xF2\xFC\xE8", true))								return false;	//Статьи
+		if (_contains("\xD4\xFD\xED\xF2\xE5\xE7\xE8", true))							return false;	//Фэнтези
+		if (!_contains("\xC3\xE5\xF2", true) && !_contains("\xC4\xE6\xE5\xED", true))	return false;	//Гет, Джен
+		if (_contains("\xD1\xF2\xE8\xF5\xE8", true))									return false;	//Стихи
+		if (_contains("\xD1\xEB\xFD\xF8", true))										return false;	//Слэш
+		if (_contains("\xD4\xE5\xEC\xF1\xEB\xFD\xF8", true))							return false;	//Фемслэш
+		if (_contains("\xCE\xEC\xE5\xE3\xE0\xE2\xE5\xF0\xF1", true))					return false;	//Омегаверс
+		if (_contains("PWP", true))		return false;
+		if (_contains("NC-17", true))	return false;
+		if (_contains("NC-21", true))	return false;
+		if (_contains("18+", true))		return false;
+	}
+	else
+	{
+		if (!_contains("\xCE\xF0\xE8\xE4\xE6\xE8\xED\xE0\xEB</title>", true))			return false;	//Ориджинал</title>
+		if (_contains("\xD1\xF2\xE0\xF2\xFC\xFF", true))								return false;	//Статья
+		if (_contains("\xD4\xFD\xED\xF2\xE5\xE7\xE8", true))							return false;	//Фэнтези
+		if (!_contains("(\xE3\xE5\xF2)", true)&&!_contains("(\xE4\xE6\xE5\xED)", true))	return false;	//(гет), (джен)
+		if (_contains("\xCE\xEC\xE5\xE3\xE0\xE2\xE5\xF0\xF1", true))					return false;	//Омегаверс
+		if (_contains("\xCD\xE5\xF6\xE5\xED\xE7\xF3\xF0\xED\xFB\xE5", true))			return false;	//Нецензурные
+		if (_contains("NC-17", true))	return false;
+	}
 	return true;
 }
 
 bool DialogDownloader::_filter_body()
 {
+	/*
 	char dash_space[3] = { mdash, ' ',  '\0' };
 	size_t dash_space_count = 0;
 	char *entry = _page_cp1251.data();
@@ -438,8 +525,8 @@ bool DialogDownloader::_filter_body()
 		minus_space_count++;
 		entry++;
 	}
-
 	if (minus_space_count > dash_space_count) return false;
+	*/
 
 	if (_contains("\xE1\xEB\xFF"))			return false;	//blya (бля)
 	if (_contains("\xF1\xF3\xEA\xE0"))		return false;	//suka (сука)
@@ -449,25 +536,23 @@ bool DialogDownloader::_filter_body()
 	if (_contains("\xE5\xE1\xE0\xED"))		return false;	//eban (ебан)
 	if (_contains("\xE6\xEE\xEF"))			return false;	//zopa (жопа)
 	if (_contains("\xF5\xE5\xF0"))			return false;	//her (хер)
-	if (_contains("\xF2\xF0\xE0\xF5"))		return false;	//trah (трах)
 	if (_contains("\xEC\xE8\xED\xE5\xF2"))	return false;	//minet (минет)
 	return true;
 }
 
-DialogDownloader::DialogDownloader()
+DialogDownloader::DialogDownloader(Resource resource)
 {
+	_resource = resource;
+
 	#ifdef _WIN32
 		_session = WinHttpOpen(L"mechan_dialog_downloader",
-		WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
+			WINHTTP_ACCESS_TYPE_DEFAULT_PROXY, WINHTTP_NO_PROXY_NAME, WINHTTP_NO_PROXY_BYPASS, 0);
 		if (_session == NULL) return;
-		_connection = WinHttpConnect(_session, L"ficbook.net", INTERNET_DEFAULT_HTTPS_PORT, 0);
+		const wchar_t *site = resource == Resource::ficbook_net ? L"ficbook.net" : L"fanfics.me";
+		_connection = WinHttpConnect(_session, site, INTERNET_DEFAULT_HTTPS_PORT, 0);
 		if (_connection == NULL) return;
 	#endif
 
-	ir_utf_init();
-	ir_utf_1251.init();
-	ir_utf_utf8.init();
-	ir_utf_utf16.init();
 	_file = fopen(MECHAN_DIR "\\data\\dialog.txt", "ab");
 }
 
@@ -487,16 +572,16 @@ void DialogDownloader::_write()
 	}
 
 	//Cleaning single phrases
-	size_t j = 0;
-	while ((j + 2) < _dialog.size())
+	for (size_t i = 0; i < _dialog.size(); i++)
 	{
-		if (_dialog[j] == "" && _dialog[j + 2] == "") _dialog.erase(_dialog.begin() + j + 1);
-		else j++;
+		if ((i == 0 || _dialog[i - 1] == "") &&
+			(i == (_dialog.size() - 1) || _dialog[i + 1] == "") &&
+			_dialog[i] != "") _dialog.erase(_dialog.begin() + i);
 	}
 
 	//Cleaning double spaces
 	while (!_dialog.empty() && _dialog.front() == "") _dialog.erase(_dialog.begin());
-	j = 0;
+	size_t j = 0;
 	while ((j + 1) < _dialog.size())
 	{
 		if (_dialog[j] == "" && _dialog[j + 1] == "") _dialog.erase(_dialog.begin() + j + 1);
@@ -505,57 +590,72 @@ void DialogDownloader::_write()
 	while (!_dialog.empty() && _dialog.back() == "") _dialog.erase(_dialog.end() - 1);
 
 	//Writing to file
+	printf("%u phrases written\n", (unsigned int)_dialog.size());
 	for (size_t i = 0; i < _dialog.size(); i++)
 	{
 		fprintf(_file, "%s\n", _dialog[i].data());
 	}
-	fprintf(_file, "\n");
+	if (_dialog.size() != 0) fprintf(_file, "\n");
 	_dialog.resize(0);
 }
 
 void DialogDownloader::download()
 {
-	unsigned int fanfic_number = 0;
+	unsigned int fanfic_number = _resource == Resource::ficbook_net ? 0 : 65400;
 	unsigned int fail_count = 0;
 
-	while (fail_count < 1000)
+	while (fail_count < 3000)
 	{
 		printf("Processing fanfic #%u... ", ++fanfic_number);
 
 		//Forming fic page with /
 		char page_name[64];
-		size_t page_name_len = sprintf(page_name, "/readfic/%u/", fanfic_number);
-		
+		size_t page_name_len;
+		if (_resource == Resource::ficbook_net) page_name_len = sprintf(page_name, "/readfic/%u/", fanfic_number);
+		else page_name_len = sprintf(page_name, "/fic%u/", fanfic_number);
+
 		//Downoading and filtering page
-		if (!_download_page(page_name) || strstr(_page_cp1251.data(), "404")) { printf("Failed\n"); fail_count++; continue; }
+		if (!_download_page(page_name)) { printf("Failed\n"); fail_count++; continue; }
 		else if (!_filter_head()) { printf("Rejected\n"); fail_count = 0; continue; }
 		else { printf("Accepted\n"); fail_count = 0; }
 
-		//searching for references to chapters
-		std::vector<unsigned int> chapter_numbers;
-		char *entry = _page_cp1251.data();
-		while (true)
+		if (_resource == Resource::ficbook_net)
 		{
-			entry = strstr(entry, page_name);
-			if (entry == nullptr) break;
-			unsigned int chapter_number = strtol(entry + page_name_len, &entry, 10);
-			if (chapter_number != 0 && (chapter_numbers.empty() || chapter_numbers.back() != chapter_number))
-				chapter_numbers.push_back(chapter_number);
-			entry++;
-		}
+			//Searching for references to chapters
+			std::vector<unsigned int> chapter_numbers;
+			char *entry = _page_cp1251.data();
+			while (true)
+			{
+				entry = strstr(entry, page_name);
+				if (entry == nullptr) break;
+				unsigned int chapter_number = strtol(entry + page_name_len, &entry, 10);
+				if (chapter_number != 0 && (chapter_numbers.empty() || chapter_numbers.back() != chapter_number))
+					chapter_numbers.push_back(chapter_number);
+				entry++;
+			}
 
-		//Processing
-		if (chapter_numbers.empty())
-		{
-			if (_filter_body()) { printf("Chapter parsed\n"); _parse(); }
+			//Processing
+			if (chapter_numbers.empty())
+			{
+				if (_filter_body()) { printf("Chapter parsed\n"); _parse(); }
+			}
+			else for (unsigned int i = 0; i < chapter_numbers.size(); i++)
+			{
+				sprintf(page_name + page_name_len, "%u", chapter_numbers[i]);
+				if (_download_page(page_name) && _filter_body()) { printf("Chapter parsed\n"); _parse(); }
+			}
+			_write();
 		}
-		else for (unsigned int i = 0; i < chapter_numbers.size(); i++)
+		else
 		{
-			sprintf(page_name + page_name_len, "%u", chapter_numbers[i]);
-			if (_download_page(page_name) && _filter_body()) { printf("Chapter parsed\n"); _parse(); }
+			for (unsigned int i = 0; true; i++)
+			{
+				sprintf(page_name, "read.php?id=%u&chapter=%u", fanfic_number, i);
+				if (!_download_page(page_name)) break;
+				if (_filter_body()) { printf("Chapter parsed\n"); _parse(); }
+			}
+			_write();
 		}
-
-		_write();
 	}
 }
 
@@ -568,7 +668,7 @@ DialogDownloader::~DialogDownloader()
 
 int _main()
 {
-	DialogDownloader downloader;
+	DialogDownloader downloader(DialogDownloader::Resource::fanfics_me);
 	downloader.download();
 	return 0;
 }
