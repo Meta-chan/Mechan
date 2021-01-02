@@ -1,5 +1,6 @@
 #include "../header/mechan.h"
 #include "../header/mechan_directory.h"
+#include "../header/mechan_parse.h"
 
 mechan::Mechan::Mechan() noexcept :
 	_dialog(this),
@@ -33,9 +34,10 @@ mechan::Neuro *mechan::Mechan::neuro() noexcept
 void mechan::Mechan::print_event_log(const std::string string) noexcept
 {
 	printf("%s\n", string.data());
-	if (_event_log_hook)
+	if (_event_log_messages > 0)
 	{
-		if (!_server.send(string, _event_log_address)) _event_log_hook = false;
+		if (!_server.send(string, _event_log_address)) _event_log_messages = 0;
+		else _event_log_messages--;
 	}
 }
 
@@ -54,18 +56,64 @@ int mechan::Mechan::main() noexcept
 		while (true)
 		{
 			Server::ReceiveResult result = _server.receive();
+			//No message
 			if (!result.ok) break;
-			else if (result.message == "!shutdown")
+			//Empry message
+			else if (result.message.empty()) {}
+			//Non-command
+			else if (result.message.front() != '?' && result.message.front() != '!')
 			{
-				print_event_log("Shutdown...");
-				return 0;
+				_server.send(_core.answer(result.message), result.address);
 			}
-			else if (result.message == "!eventlog")
+			else
 			{
-				_event_log_address = result.address;
-				_event_log_hook = true;
+				std::vector<std::string> parsed;
+				parse_space(result.message, &parsed);
+				// !coefficient
+				if (result.message.front() == '!'
+					&& parsed.size() == 2
+					&& parsed[0] == "coefficient"
+					&& strtod(parsed[1].data(), nullptr) > 0)
+				{
+					_neuro.set_coefficient(strtod(parsed[1].data(), nullptr));
+					_server.send("!", result.address);
+				}
+				// ?coefficient
+				else if (result.message.front() == '?'
+					&& parsed.size() == 1
+					&& parsed[0] == "coefficient")
+				{
+					char strcoef[32];
+					sprintf(strcoef, "%lf", _neuro.get_coefficient());
+					_server.send(strcoef, result.address);
+				}
+				// !shutdown
+				else if (result.message.front() == '!'
+					&& parsed.size() == 1
+					&& parsed[0] == "shutdown")
+				{
+					_server.send("!", result.address);
+					return 0;
+				}
+				// !log
+				else if (result.message.front() == '!'
+					&& parsed.size() == 2
+					&& parsed[0] == "log"
+					&& strtol(parsed[1].data(), nullptr, 10) > 0)
+				{
+					_event_log_address = result.address;
+					_event_log_messages = strtol(parsed[1].data(), nullptr, 10);
+					_server.send("!", result.address);
+				}
+				// ?
+				else if (result.message.front() == '?'
+					&& parsed.size() == 0)
+				{
+					_server.send("!", result.address);
+				}
+				// Invalid
+				else _server.send("?", result.address);
 			}
-			else _server.send(_core.answer(result.message), result.address);
 		}
 
 		//Running idle

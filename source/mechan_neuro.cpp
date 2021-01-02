@@ -50,10 +50,11 @@ void mechan::Neuro::_unroll_message(
 	v[33 * n_words * n_chars + 2] = (message_type == '?') ? 1.0 : -1.0;
 }
 
-mechan::Neuro::Neuro(Mechan *mechan) noexcept : _mechan(mechan)
+mechan::Neuro::Neuro(Mechan *mechan) noexcept :
+	_mechan(mechan),
+	_distribution(0, mechan->dialog()->count() - 1)
 {
 	_generator.seed((unsigned int)time(nullptr));
-	_distribution = new std::uniform_int_distribution<unsigned int>(0, mechan->dialog()->count() - 1);
 	_neuro = new ir::Neuro<double>(WIDE_MECHAN_DIR "\\data\\neuro", nullptr);
 	if (!_neuro->ok())
 	{
@@ -61,7 +62,7 @@ mechan::Neuro::Neuro(Mechan *mechan) noexcept : _mechan(mechan)
 		unsigned int layers[4] = { 2 * message_size, 2000, 2000, 1 };
 		_neuro = new ir::Neuro<double>(4, layers, 0.01, nullptr);
 	}
-	if (_neuro->ok()) { _neuro->set_coefficient(0.025); _last_save = clock(); }
+	if (_neuro->ok()) { _neuro->set_coefficient(_coeffcient); _last_save = clock(); }
 }
 
 bool mechan::Neuro::ok() const noexcept
@@ -69,23 +70,39 @@ bool mechan::Neuro::ok() const noexcept
 	return _neuro != nullptr && _neuro->ok();
 }
 
+double mechan::Neuro::get_coefficient() const noexcept
+{
+	return _coeffcient;
+}
+
+void mechan::Neuro::set_coefficient(double coefficient) noexcept
+{
+	_neuro->set_coefficient(coefficient);
+}
+
+void mechan::Neuro::save() noexcept
+{
+	_neuro->save(WIDE_MECHAN_DIR "\\data\\neuro");
+	_last_save = clock();
+}
+
 void mechan::Neuro::train() noexcept
 {
 	//unrolling message
-	unsigned int nmessage = (*_distribution)(_generator);
+	unsigned int nmessage = _distribution(_generator);
 	std::string question = _mechan->dialog()->dialog(nmessage);
 	if (question.empty()) return;
 	std::string answer = _mechan->dialog()->dialog(nmessage + 1);
 	if (answer.empty()) return;
 
 	std::vector<std::string> parsed;
-	parse(question, &parsed, true);
+	parse_punctuation(question, &parsed);
 	_unroll_message(&parsed, question.back(), _neuro->get_input()->data());
 
-	if (((*_distribution)(_generator) % (1 + negative_pro_positive)) == 0)
+	if ((_distribution(_generator) % (1 + negative_pro_positive)) == 0)
 	{
 		//positive training
-		parse(answer, &parsed, true);
+		parse_punctuation(answer, &parsed);
 		_unroll_message(&parsed, answer.back(), _neuro->get_input()->data() + message_size);
 		_neuro->forward();
 		_neuro->get_goal()->at(0) = 1.0;
@@ -98,11 +115,11 @@ void mechan::Neuro::train() noexcept
 	else while (true)
 	{
 		//negative training
-		nmessage = (*_distribution)(_generator);
+		nmessage = _distribution(_generator);
 		std::string random = _mechan->dialog()->dialog(nmessage);
 		if (!random.empty())
 		{
-			parse(random, &parsed, true);
+			parse_punctuation(random, &parsed);
 			_unroll_message(&parsed, random.back(), _neuro->get_input()->data() + message_size);
 			_neuro->forward();
 			_neuro->get_goal()->at(0) = -1.0;

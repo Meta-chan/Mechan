@@ -9,6 +9,7 @@
 
 #include "../header/mechan_socket.h"
 #include "../header/mechan_directory.h"
+#include "../header/mechan_parse.h"
 
 #include <td/telegram/Client.h>
 #include <td/telegram/Log.h>
@@ -21,7 +22,7 @@
 #include <chrono>
 #include <thread>
 #define IR_IMPLEMENT
-#include <ir_utf.h>
+#include <ir_codec.h>
 
 #define TDP(TDCLASSNAME) ::td::td_api::object_ptr<::td::td_api::TDCLASSNAME>
 #define TDMOVE(TDOBJECT) ::td::td_api::move_object_as<decltype(TDOBJECT)::element_type>(TDOBJECT)
@@ -292,18 +293,20 @@ void mechan::TelegramInterface::_receive()
 int mechan::TelegramInterface::loop()
 {
 	if (!_mechan_client.ok() || _status != Status::authorized) return 1;
-	ir_utf_init();
-	ir_utf_utf8.init();
-	ir_utf_1251.init();
 	while (true)
 	{
+		//Receiving message
 		_receive();
+		if (!_receive_result.ok || _receive_result.message.empty()) continue;		
 		printf("Got message\n");
 		std::string question;
-		question.resize(ir_utf_recode(&ir_utf_utf8, _receive_result.message.data(), ' ', &ir_utf_1251, nullptr));
-		ir_utf_recode(&ir_utf_utf8, _receive_result.message.data(), ' ', &ir_utf_1251, &question[0]);
+		question.resize(ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_receive_result.message.data(), ' ', nullptr));
+		ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_receive_result.message.data(), ' ', &question[0]);
+			
+		//Sending to Mechan
 		_mechan_client.send(question, _receive_result.address);
-		if (question == "!shutdown") return 0;
+		
+		//Receiving from Mechan
 		while (true)
 		{
 			_receive_result = _mechan_client.receive();
@@ -311,10 +314,27 @@ int mechan::TelegramInterface::loop()
 			else std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 		std::string answer8;
-		answer8.resize(ir_utf_recode(&ir_utf_1251, _receive_result.message.data(), ' ', &ir_utf_utf8, nullptr));
-		ir_utf_recode(&ir_utf_1251, _receive_result.message.data(), ' ', &ir_utf_utf8, &answer8[0]);
+		answer8.resize(ir::Codec::recode<ir::Codec::CP1251, ir::Codec::UTF8>(_receive_result.message.data(), ' ', nullptr));
+		ir::Codec::recode<ir::Codec::CP1251, ir::Codec::UTF8>(_receive_result.message.data(), ' ', &answer8[0]);
+		
+		//Sending message
 		_send(answer8, _receive_result.address);
-		printf("Sent response\n");
+		printf("Sent result\n");
+		
+		//Post-processing commands
+		if (_receive_result.message.front() == '!' || _receive_result.message.front() == '?')
+		{
+			std::vector<std::string> parsed;
+			parse_space(_receive_result.message, &parsed);
+			// !shutdown
+			if (result.message.front() == '!'
+				&& parsed.size() == 1
+				&& parsed[0] == "shutdown")
+			{
+				_server.send("!", result.address);
+				return 0;
+			}
+		}
 	}
 }
 

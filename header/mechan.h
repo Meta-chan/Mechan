@@ -14,7 +14,7 @@ namespace mechan
 	{
 	private:
 		Server::Address _event_log_address;
-		bool _event_log_hook = false;
+		unsigned int _event_log_messages = 0;
 
 		Server _server;
 		Dialog _dialog;

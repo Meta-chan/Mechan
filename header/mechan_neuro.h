@@ -18,11 +18,12 @@ namespace mechan
 		static const unsigned int negative_pro_positive = 1;
 		
 		Mechan *_mechan												= nullptr;
-		std::default_random_engine _generator;
-		std::uniform_int_distribution<unsigned int> *_distribution	= nullptr;
-		clock_t _last_save											= 0;
 		ir::Neuro<double> *_neuro									= nullptr;
-		
+		double _coeffcient											= 0.01;
+		clock_t _last_save											= 0;
+		std::default_random_engine _generator;
+		std::uniform_int_distribution<unsigned int> _distribution;
+
 		void _unroll_char(char c, double v[33])								noexcept;
 		void _unroll_word(const std::string word, double v[33 * n_chars])	noexcept;
 		void _unroll_message(
@@ -32,6 +33,9 @@ namespace mechan
 	public:
 		Neuro(Mechan *mechan)												noexcept;
 		bool ok()															const noexcept;
+		double get_coefficient()											const noexcept;
+		void set_coefficient(double coefficient)							noexcept;
+		void save()															noexcept;
 		void train()														noexcept;
 		double qestion_answer(
 			const std::vector<std::string> *question, char question_type,

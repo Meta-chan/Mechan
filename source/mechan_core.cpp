@@ -29,7 +29,7 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 	std::vector<std::vector<unsigned int>> question_syngroups; 
 	{
 		std::vector<std::string> parsed_question;
-		parse(question, &parsed_question, true);
+		parse_punctuation(question, &parsed_question);
 		question_syngroups.resize(parsed_question.size());
 		for (unsigned int i = 0; i < parsed_question.size(); i++)
 			_mechan->synonym()->extended_syngroup(parsed_question[i], &question_syngroups[i]);
@@ -61,7 +61,7 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 
 			//Parsing random question
 			std::vector<std::string> parsed_random_question;
-			parse(random_question, &parsed_random_question, true);
+			parse_punctuation(random_question, &parsed_random_question);
 
 			//Counting synonyms
 			unsigned int synonym_count = 0;
@@ -100,13 +100,13 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 
 	//Passing throught neuronal net
 	std::vector<std::string> parsed_question;
-	parse(question, &parsed_question, true);
+	parse_punctuation(question, &parsed_question);
 	for (unsigned int i = 0; i < best_count; i++)
 	{
 		if (!best[i].answer.empty())
 		{
 			std::vector<std::string> parsed_answer;
-			parse(best[i].answer, &parsed_answer, true);
+			parse_punctuation(best[i].answer, &parsed_answer);
 			best[i].heuristics = _mechan->neuro()->qestion_answer(
 				&parsed_question, question.back(),
 				&parsed_answer, best[i].answer.back());

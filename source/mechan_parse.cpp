@@ -1,7 +1,7 @@
 #include "../header/mechan_parse.h"
 #include "../header/mechan_lowercase.h"
 
-void mechan::parse(const std::string string, std::vector<std::string> *words, bool lower) noexcept
+void mechan::parse_punctuation(const std::string string, std::vector<std::string> *words) noexcept
 {
 	words->resize(0);
 	bool request_new = true;
@@ -18,7 +18,7 @@ void mechan::parse(const std::string string, std::vector<std::string> *words, bo
 				words->push_back(std::string());
 				request_new = false;
 			}
-			words->back().push_back(lower ? lowercase(string[i]) : string[i]);
+			words->back().push_back(lowercase(string[i]));
 		}
 		else if (string[i] == '-')
 		{
@@ -26,4 +26,29 @@ void mechan::parse(const std::string string, std::vector<std::string> *words, bo
 		}
 		else request_new = true;
 	}
-};
+}
+
+void mechan::parse_space(const std::string string, std::vector<std::string> *words) noexcept
+{
+	words->resize(0);
+	bool request_new = true;
+	for (unsigned int i = 0; i < string.size(); i++)
+	{
+		if (string[i] == ' ' || string[i] == ',')
+		{
+			request_new = true;
+		}
+		else if ((string[i] == '!' || string[i] == '?') && i == 0)
+		{
+		}
+		else
+		{
+			if (request_new)
+			{
+				words->push_back(std::string());
+				request_new = false;
+			}
+			words->back().push_back(lowercase(string[i]));
+		}
+	}
+}

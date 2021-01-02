@@ -5,5 +5,6 @@
 
 namespace mechan
 {
-	void parse(const std::string string, std::vector<std::string> *words, bool lower) noexcept;
+	void parse_punctuation(const std::string string, std::vector<std::string> *words) noexcept;
+	void parse_space(const std::string string, std::vector<std::string> *words) noexcept;
 }
