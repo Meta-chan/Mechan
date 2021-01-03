@@ -62,7 +62,7 @@ int mechan::Mechan::main() noexcept
 			else if (result.message.empty()) {}
 			//Non-command
 			else if (result.message.front() != '?' && result.message.front() != '!')
-			{
+			{	
 				_server.send(_core.answer(result.message), result.address);
 			}
 			else

@@ -62,7 +62,7 @@ mechan::Neuro::Neuro(Mechan *mechan) noexcept :
 		unsigned int layers[4] = { 2 * message_size, 2000, 2000, 1 };
 		_neuro = new ir::Neuro<double>(4, layers, 0.01, nullptr);
 	}
-	if (_neuro->ok()) { _neuro->set_coefficient(_coeffcient); _last_save = clock(); }
+	if (_neuro->ok()) { _neuro->set_coefficient(0.01); _last_save = clock(); }
 }
 
 bool mechan::Neuro::ok() const noexcept
@@ -72,7 +72,7 @@ bool mechan::Neuro::ok() const noexcept
 
 double mechan::Neuro::get_coefficient() const noexcept
 {
-	return _coeffcient;
+	return _neuro->get_coefficient();
 }
 
 void mechan::Neuro::set_coefficient(double coefficient) noexcept

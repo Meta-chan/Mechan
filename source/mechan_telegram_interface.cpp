@@ -327,11 +327,10 @@ int mechan::TelegramInterface::loop()
 			std::vector<std::string> parsed;
 			parse_space(_receive_result.message, &parsed);
 			// !shutdown
-			if (result.message.front() == '!'
+			if (_receive_result.message.front() == '!'
 				&& parsed.size() == 1
 				&& parsed[0] == "shutdown")
 			{
-				_server.send("!", result.address);
 				return 0;
 			}
 		}

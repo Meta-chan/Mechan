@@ -19,7 +19,6 @@ namespace mechan
 		
 		Mechan *_mechan												= nullptr;
 		ir::Neuro<double> *_neuro									= nullptr;
-		double _coeffcient											= 0.01;
 		clock_t _last_save											= 0;
 		std::default_random_engine _generator;
 		std::uniform_int_distribution<unsigned int> _distribution;
