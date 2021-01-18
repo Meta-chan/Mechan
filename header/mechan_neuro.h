@@ -1,5 +1,7 @@
 #pragma once
 
+#include "mechan_parse.h"
+
 #include <string>
 #include <random>
 #include <time.h>
@@ -23,11 +25,9 @@ namespace mechan
 		std::default_random_engine _generator;
 		std::uniform_int_distribution<unsigned int> _distribution;
 
-		void _unroll_char(char c, double v[33])								noexcept;
-		void _unroll_word(const std::string word, double v[33 * n_chars])	noexcept;
-		void _unroll_message(
-			const std::vector<std::string> *message, char message_type,
-			double v[message_size])											noexcept;
+		void _unroll_char(char c, double v[33])										noexcept;
+		void _unroll_word(const std::string lowercase_word, double v[33 * n_chars])	noexcept;
+		void _unroll_message(const Parsed *message, double v[message_size])			noexcept;
 
 	public:
 		Neuro(Mechan *mechan)												noexcept;
@@ -36,9 +36,7 @@ namespace mechan
 		void set_coefficient(double coefficient)							noexcept;
 		void save()															noexcept;
 		void train()														noexcept;
-		double qestion_answer(
-			const std::vector<std::string> *question, char question_type,
-			const std::vector<std::string> *answer, char answer_type)		noexcept;
+		double qestion_answer(const Parsed *question, const Parsed *answer)	noexcept;
 		~Neuro()															noexcept;
 	};
 }

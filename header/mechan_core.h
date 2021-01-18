@@ -13,7 +13,7 @@ namespace mechan
 		Mechan *_mechan	= nullptr;
 		bool _ok		= false;
 
-		bool _intersect(const std::vector<unsigned int> *a, const std::vector<unsigned int> *b) const noexcept;
+		bool _intersect(const std::vector<unsigned int> *a, const unsigned int *b, unsigned int bsize) const noexcept;
 
 	public:
 		Core(Mechan *mechan)							noexcept;

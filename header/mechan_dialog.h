@@ -16,7 +16,7 @@ namespace mechan
 	public:
 		Dialog(Mechan *mechan)				noexcept;
 		bool ok()							const noexcept;
-		std::string dialog(unsigned int i)	const noexcept;
+		bool message(unsigned int i, std::string *s)	const noexcept;
 		unsigned int count()				const noexcept;
 		~Dialog()							noexcept;
 	};

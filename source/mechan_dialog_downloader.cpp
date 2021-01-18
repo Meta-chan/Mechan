@@ -39,14 +39,7 @@ private:
 	static const size_t max_direct_speech = 300;
 	static const size_t max_author_speech = 300;
 	static const size_t max_plain_text = 300;
-	static const char ellipsis = (char)0x85;
-	static const char ndash = (char)0x96;
-	static const char mdash = (char)0x97;
-	static const char empty1 = (char)0xA0;
-	static const char empty2 = (char)0xAD;
-	static const char empty3 = (char)0x98;
-	static const char openq = (char)0xAB;
-	static const char closeq = (char)0xBB;
+	
 
 	ir::QuietVector<char> _page_utf8;
 	ir::QuietVector<char> _page_cp1251;

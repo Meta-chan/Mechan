@@ -1,9 +1,9 @@
 #include "../header/mechan_parse.h"
-#include "../header/mechan_lowercase.h"
+#include "../header/mechan_character.h"
 
-void mechan::parse_punctuation(const std::string string, std::vector<std::string> *words) noexcept
+void mechan::parse_punctuation(const std::string string, Parsed *parsed) noexcept
 {
-	words->resize(0);
+	parsed->words.resize(0);
 	bool request_new = true;
 	for (unsigned int i = 0; i < string.size(); i++)
 	{
@@ -15,14 +15,16 @@ void mechan::parse_punctuation(const std::string string, std::vector<std::string
 		{
 			if (request_new)
 			{
-				words->push_back(std::string());
+				Parsed::Word new_word;
+				new_word.uppercase = is_uppercase(string[i]);
+				parsed->words.push_back(new_word);
 				request_new = false;
 			}
-			words->back().push_back(lowercase(string[i]));
+			parsed->words.back().lowercase.push_back(lowercase(string[i]));
 		}
 		else if (string[i] == '-')
 		{
-			if (!request_new) words->back().push_back(string[i]);
+			if (!request_new) parsed->words.back().lowercase.push_back(string[i]);
 		}
 		else request_new = true;
 	}

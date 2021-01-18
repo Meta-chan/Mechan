@@ -2,8 +2,7 @@
 
 #include "../header/mechan_socket.h"
 #include "../header/mechan_dialog.h"
-#include "../header/mechan_morphology.h"
-#include "../header/mechan_synonym.h"
+#include "../header/mechan_word.h"
 #include "../header/mechan_neuro.h"
 #include "../header/mechan_core.h"
 
@@ -18,16 +17,14 @@ namespace mechan
 
 		Server _server;
 		Dialog _dialog;
-		Morphology _morphology;
-		Synonym _synonym;
+		Word _word;
 		Neuro _neuro;
 		Core _core;
 
 	public:
 		Mechan()										noexcept;
 		Dialog *dialog()								noexcept;
-		Morphology *morphology()						noexcept;
-		Synonym *synonym()								noexcept;
+		Word *word()									noexcept;
 		Neuro *neuro()									noexcept;
 		void print_event_log(const std::string string)	noexcept;
 		int main()										noexcept;

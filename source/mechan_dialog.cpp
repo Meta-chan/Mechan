@@ -94,12 +94,21 @@ bool mechan::Dialog::ok() const noexcept
 	return _dialog != nullptr && _dialog->ok();
 }
 
-std::string mechan::Dialog::dialog(unsigned int i) const noexcept
+bool mechan::Dialog::message(unsigned int i, std::string *s) const noexcept
 {
 	assert(ok());
-	ir::ConstBlock data;
-	if (_dialog->read(i, &data) == ir::ec::ok) return std::string((const char*)data.data(), data.size());
-	else return std::string();
+	if (s != nullptr)
+	{
+		ir::ConstBlock data;
+		if (_dialog->read(i, &data) != ir::ec::ok) return false;
+		s->resize(data.size());
+		memcpy(&s->at(0), data.data(), data.size());
+		return true;
+	}
+	else
+	{
+		return _dialog->probe(i) == ir::ec::ok;
+	}
 }
 
 unsigned int mechan::Dialog::count() const noexcept

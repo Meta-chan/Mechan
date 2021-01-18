@@ -4,8 +4,7 @@
 
 mechan::Mechan::Mechan() noexcept :
 	_dialog(this),
-	_morphology(this),
-	_synonym(this),
+	_word(this),
 	_neuro(this),
 	_core(this)
 {
@@ -16,14 +15,9 @@ mechan::Dialog *mechan::Mechan::dialog() noexcept
 	return &_dialog;
 }
 
-mechan::Morphology *mechan::Mechan::morphology() noexcept
+mechan::Word *mechan::Mechan::word() noexcept
 {
-	return &_morphology;
-}
-
-mechan::Synonym *mechan::Mechan::synonym() noexcept
-{
-	return &_synonym;
+	return &_word;
 }
 
 mechan::Neuro *mechan::Mechan::neuro() noexcept
@@ -45,8 +39,7 @@ int mechan::Mechan::main() noexcept
 {
 	if(!_server.ok()
 	|| !_neuro.ok()
-	|| !_morphology.ok()
-	|| !_synonym.ok()
+	|| !_word.ok()
 	|| !_dialog.ok()
 	|| !_core.ok()) return 1;
 
