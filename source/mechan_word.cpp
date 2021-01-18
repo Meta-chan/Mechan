@@ -93,7 +93,7 @@ bool mechan::Word::_parse_dialog() noexcept
 
 void mechan::Word::_parse_morphology_add(unsigned int group, const std::string lowercase_word, MorphologyCharacteristics ch) noexcept
 {
-	if (lowercase_word.empty()) return;
+	if (lowercase_word.empty() || _unpacked_words.count(lowercase_word) == 0) return;
 
 	_unpacked_morphology_groups.resize(group + 1);
 	_unpacked_morphology_groups[group].lowercase_words.insert(lowercase_word);
@@ -137,7 +137,7 @@ bool mechan::Word::_parse_morphology() noexcept
 		{
 			if (is_alphanumeric(c))
 			{
-				lowercase_word.push_back(c);
+				lowercase_word.push_back(lowercase(c));
 				state = State::word_wait_delimiter;
 			}
 			else if (c == '*')
@@ -151,7 +151,7 @@ bool mechan::Word::_parse_morphology() noexcept
 		{
 			if (is_alphanumeric(c))
 			{
-				lowercase_word.push_back(c);
+				lowercase_word.push_back(lowercase(c));
 				state = State::word_wait_delimiter;
 			}
 			else if (c == '*')
@@ -263,7 +263,7 @@ bool mechan::Word::_parse_morphology() noexcept
 
 void mechan::Word::_parse_synonym_add(unsigned int group, const std::string lowercase_word) noexcept
 {
-	if (lowercase_word.empty()) return;
+	if (lowercase_word.empty() || _unpacked_words.count(lowercase_word) == 0) return;
 
 	_unpacked_words[lowercase_word].synonym_groups.insert(group);
 	for (auto i = _unpacked_words[lowercase_word].morphology_characteristics.cbegin();
@@ -479,10 +479,9 @@ mechan::Word::Word(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	if (!_load())
 	{
-		if (!_parse_dialog()) return;
-		if (!_parse_morphology()) return;
-		if (!_parse_synonym()) return;
-		if (!_pack()) return;
+		if (_parse_dialog() && _parse_morphology() && _parse_synonym()) _pack();
+		_unpacked_words.clear();
+		_unpacked_morphology_groups.clear();
 	}
 }
 

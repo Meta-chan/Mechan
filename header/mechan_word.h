@@ -161,16 +161,10 @@ namespace mechan
 			std::set<std::string> lowercase_words;	//not sorted
 		};
 
-		struct UnpackedSynonymGroupInfo
-		{
-			std::set<std::string> lowercase_words;	//not sorted
-		};
-	
 		Mechan *_mechan							= nullptr;
 		ir::S2STDatabase *_words				= nullptr;
 		std::map<std::string, UnpackedWordInfo> _unpacked_words;
 		std::vector<UnpackedMorphologyGroupInfo> _unpacked_morphology_groups;
-		std::vector<UnpackedSynonymGroupInfo> _unpacked_sysnonym_groups;
 		std::vector<char> _buffer;
 
 		//Open existing databases

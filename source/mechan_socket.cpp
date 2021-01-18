@@ -18,7 +18,7 @@
 #include <string.h>
 #include <assert.h>
 
-#define SERVER_IP "192.168.0.4"
+#define SERVER_IP "192.168.178.3"
 #define SERVER_PORT 30000
 
 mechan::Server::Server() noexcept

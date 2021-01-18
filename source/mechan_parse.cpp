@@ -4,6 +4,7 @@
 void mechan::parse_punctuation(const std::string string, Parsed *parsed) noexcept
 {
 	parsed->words.resize(0);
+	parsed->end = string.empty() ? '\0' : string.back();
 	bool request_new = true;
 	for (unsigned int i = 0; i < string.size(); i++)
 	{
