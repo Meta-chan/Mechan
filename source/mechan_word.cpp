@@ -72,11 +72,21 @@ bool mechan::Word::_parse_dialog() noexcept
 {
 	std::string message;
 	Parsed parsed;
-
-	//Parse each message inf dialog
-	for (unsigned int i = 0; i < _mechan->dialog()->count(); i++)
+	unsigned int reported = 0;
+	
+	for (unsigned int index = 0; index < _mechan->dialog()->count(); index++)
 	{
-		if (!_mechan->dialog()->message(i, &message)) continue;
+		//Report success
+		if ((unsigned int)(100.0 * index / _mechan->dialog()->count()) > reported)
+		{
+			reported = (unsigned int)(100.0 * index / _mechan->dialog()->count());
+			char buffer[64];
+			sprintf(buffer, "Dialog words counting %u", reported);
+			_mechan->print_event_log(buffer);
+		}
+
+		//Parse message
+		if (!_mechan->dialog()->message(index, &message)) continue;
 		parse_punctuation(message, &parsed);
 		
 		//Encount each word in message
@@ -114,17 +124,28 @@ bool mechan::Word::_parse_morphology() noexcept
 		wait_endline
 	};
 	
+	//Open file
 	ir::FileResource morphology = fopen(MECHAN_DIR "\\data\\morphology.txt", "r");
+	_mechan->print_event_log("Morphology file found");
 	if (morphology == nullptr) return false;
+	fseek(morphology, 0, SEEK_END);
+	unsigned int morphology_size = ftell(morphology);
+	fseek(morphology, 0, SEEK_SET);
+	
+	//Init variables
 	State state = State::double_endline_wait_word;
 	std::string lowercase_word;
 	std::string text_characteristic;
 	std::vector<std::string> text_characteristics;
 	MorphologyCharacteristics characteristics;
 	unsigned int group = 0;
+	unsigned int reported = 0;
+	unsigned int position = 0;
 
+	//Parse
 	while (true)
 	{
+		//Read and process symbol
 		char c;
 		if (fread(&c, 1, 1, morphology) == 0)
 		{
@@ -257,6 +278,16 @@ bool mechan::Word::_parse_morphology() noexcept
 			break;
 		}
 		}
+
+		//Report success
+		position++;
+		if ((unsigned int)(100.0 * position / morphology_size) > reported)
+		{
+			reported = (unsigned int)(100.0 * position / morphology_size);
+			char buffer[64];
+			sprintf(buffer, "Morphology file parsing %u", reported);
+			_mechan->print_event_log(buffer);
+		}
 	}
 	return true;
 }
@@ -291,14 +322,25 @@ bool mechan::Word::_parse_synonym() noexcept
 		invalid_wait_delimiter
 	};
 	
+	//Open file
 	ir::FileResource synonym = fopen(MECHAN_DIR "\\data\\synonym.txt", "r");
 	if (synonym == nullptr) return false;
+	_mechan->print_event_log("Synonym file found");
+	fseek(synonym, 0, SEEK_END);
+	unsigned int synonym_size = ftell(synonym);
+	fseek(synonym, 0, SEEK_SET);
+
+	//Init variables
 	State  state = State::delimiter_wait_word;
 	std::string lowercase_word;
 	unsigned int group = 0;
+	unsigned int reported = 0;
+	unsigned int position = 0;
 
+	//Parse
 	while (true)
 	{
+		//Read and process symbol
 		char c;
 		if (fread(&c, 1, 1, synonym) == 0)
 		{
@@ -392,6 +434,16 @@ bool mechan::Word::_parse_synonym() noexcept
 			}
 			break;
 		}
+		}
+
+		//Report success
+		position++;
+		if ((unsigned int)(100.0 * position / synonym_size) > reported)
+		{
+			reported = (unsigned int)(100.0 * position / synonym_size);
+			char buffer[64];
+			sprintf(buffer, "Synonym file parsing %u", reported);
+			_mechan->print_event_log(buffer);
 		}
 	}
 	return true;

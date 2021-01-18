@@ -12,6 +12,7 @@ namespace mechan
 	private:
 		Mechan *_mechan						= nullptr;
 		ir::N2STDatabase *_dialog			= nullptr;
+		bool _parse() noexcept;
 
 	public:
 		Dialog(Mechan *mechan)				noexcept;

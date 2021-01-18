@@ -2,91 +2,90 @@
 #include "../header/mechan_directory.h"
 #include <assert.h>
 #include <stdio.h>
+#include <ir_resource/ir_file_resource.h>
 
-namespace mechan
+bool mechan::Dialog::_parse() noexcept
 {
-	class DialogParser
-	{
-	private:
-		Mechan *_mechan				= nullptr;
-		FILE *_text					= nullptr;
-		ir::N2STDatabase *_dialog	= nullptr;
-
-	public:
-		DialogParser(Mechan *mechan)	noexcept;	
-		bool parse()					noexcept;
-		~DialogParser()					noexcept;
-	};
-}
-
-mechan::DialogParser::DialogParser(Mechan *mechan) noexcept : _mechan(mechan)
-{}
-
-bool mechan::DialogParser::parse() noexcept
-{
-	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::neww, nullptr);
-	if (!_dialog->ok()) return false;
-	_dialog->set_ram_mode(true, true);
-	_text = fopen(MECHAN_DIR "\\data\\dialog.txt", "r");
-	if (_text == nullptr) return false;
+	//Open text file
+	ir::FileResource dialog = fopen(MECHAN_DIR "\\data\\dialog.txt", "r");
+	if (dialog == nullptr) return false;
 	_mechan->print_event_log("Dialog file found");
+	fseek(dialog, 0, SEEK_END);
+	unsigned int dialog_size = ftell(dialog);
+	fseek(dialog, 0, SEEK_SET);
 
-	unsigned int i = 0;
+	//Open database
+	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::neww, nullptr);
+	if (!_dialog->ok() || _dialog->set_ram_mode(true, true) != ir::ec::ok)
+	{
+		delete _dialog;
+		_dialog = nullptr;
+		return false;
+	}
+	
+	//Init variables
+	unsigned int reported = 0;
+	unsigned int position = 0;
+	unsigned int index = 0;
 	std::string buffer;
+	
+	//Parse
 	while (true)
 	{
+		//Read symbol
 		char c;
-		bool read = fread(&c, 1, 1, _text) != 0;
+		bool read = fread(&c, 1, 1, dialog) != 0;
+
+		//Process symbol
 		if (!read || c == '\n')
 		{
 			if (!buffer.empty())
 			{
 				ir::ConstBlock data(buffer.c_str(), buffer.size());
-				_dialog->insert(i, data);
+				_dialog->insert(index, data);
 				buffer.resize(0);
 			}
-			i++;
+			index++;
 			if (!read) break;
 		}
 		else if (c == '\r') {}
 		else buffer.push_back(c);
-	}
-	return true;
-}
 
-mechan::DialogParser::~DialogParser() noexcept
-{
-	if (_dialog != nullptr) delete _dialog;
-	if (_text != nullptr) fclose(_text);
+		//Report success
+		position++;
+		if ((unsigned int)(100.0 * position / dialog_size) > reported)
+		{
+			reported = (unsigned int)(100.0 * position / dialog_size);
+			char buffer[64];
+			sprintf(buffer, "Dialog file parsing %u", reported);
+			_mechan->print_event_log(buffer);
+		}
+	}
+
+	delete _dialog;
+	_dialog = nullptr;
+	return true;
 }
 
 mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	//First try
 	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
-	if (_dialog->ok())
+	if (_dialog->ok() && _dialog->set_ram_mode(true, true) == ir::ec::ok)
 	{
 		_mechan->print_event_log("Dialog database found");
-		_dialog->set_ram_mode(true, true); return;
+		return;
 	}
 	
 	//Second try
-	delete _dialog;
-	bool parsed = false;
-	{
-		DialogParser parser(mechan);
-		parsed = parser.parse();
-	}
-	if (parsed)
+	if (_parse())
 	{
 		_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
-		if (_dialog->ok())
+		if (_dialog->ok() && _dialog->set_ram_mode(true, true) == ir::ec::ok)
 		{
 			_mechan->print_event_log("Dialog database found");
-			_dialog->set_ram_mode(true, true);
 		}
 	}
-	else _dialog = nullptr;
 }
 
 bool mechan::Dialog::ok() const noexcept
