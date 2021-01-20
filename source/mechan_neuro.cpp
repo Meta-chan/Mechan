@@ -1,6 +1,5 @@
 #include "../header/mechan.h"
 #include "../header/mechan_parse.h"
-#include "../header/mechan_directory.h"
 #include "../header/mechan_character.h"
 #include <time.h>
 #include <assert.h>
@@ -53,7 +52,7 @@ mechan::Neuro::Neuro(Mechan *mechan) noexcept :
 	_distribution(0, mechan->dialog()->count() - 1)
 {
 	_generator.seed((unsigned int)time(nullptr));
-	_neuro = new ir::Neuro<double>(WIDE_MECHAN_DIR "\\data\\neuro", nullptr);
+	_neuro = new ir::Neuro<double>(SS("data\\neuro"), nullptr);
 	if (!_neuro->ok())
 	{
 		delete _neuro;
@@ -80,7 +79,7 @@ void mechan::Neuro::set_coefficient(double coefficient) noexcept
 
 void mechan::Neuro::save() noexcept
 {
-	_neuro->save(WIDE_MECHAN_DIR "\\data\\neuro");
+	_neuro->save(SS("data\\neuro"));
 	_last_save = clock();
 }
 
@@ -132,7 +131,7 @@ void mechan::Neuro::train() noexcept
 	//saving
 	if (clock() - _last_save > 3600 * CLOCKS_PER_SEC)
 	{
-		_neuro->save(WIDE_MECHAN_DIR "\\data\\neuro");
+		_neuro->save(SS("data\\neuro"));
 		_last_save = clock();
 	}
 }
@@ -147,6 +146,6 @@ double mechan::Neuro::qestion_answer(const Parsed *question, const Parsed *answe
 
 mechan::Neuro::~Neuro() noexcept
 {
-	if (_neuro != nullptr && _neuro->ok()) _neuro->save(WIDE_MECHAN_DIR "\\data\\neuro");
+	if (_neuro != nullptr && _neuro->ok()) _neuro->save(SS("data\\neuro"));
 	delete _neuro;
 }

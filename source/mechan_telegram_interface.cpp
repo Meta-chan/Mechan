@@ -1,15 +1,6 @@
-#ifndef _DEBUG
-
-#define MECHAN_API_ID		1367564
-#define MECHAN_API_HASH		"582ffce43327426097c4e71833e6e00f"
-#define MECHAN_PHONE		"+491796171879"
-#define MECHAN_FIRST_NAME	"Me-chan"
-#define MECHAN_SECOND_NAME	""
-#define MECHAN_PASSWORD		""
-
 #include "../header/mechan_socket.h"
-#include "../header/mechan_directory.h"
 #include "../header/mechan_parse.h"
+#include "../header/mechan_config.h"
 
 #include <td/telegram/Client.h>
 #include <td/telegram/Log.h>
@@ -17,7 +8,7 @@
 #include <td/telegram/td_api.hpp>
 
 #include <time.h>
-#include <stdio.h>
+#include <iostream>
 #include <limits>
 #include <chrono>
 #include <thread>
@@ -97,53 +88,59 @@ TDP(Object) mechan::TelegramInterface::_call(TDP(Function) function)
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_tdlib_parameters()
 {
-	printf("Processing authorizationStateWaitParameters\n");
+	std::cout << "Processing authorizationStateWaitParameters" << std::endl;
 	TDP(tdlibParameters) parameters = TDMAKE(tdlibParameters)();
-	parameters->database_directory_ = MECHAN_DIR;
-	parameters->use_message_database_ = true;
-	parameters->use_secret_chats_ = false;
-	parameters->api_id_ = MECHAN_API_ID;
-	parameters->api_hash_ = MECHAN_API_HASH;
-	parameters->system_language_code_ = "en";
-	parameters->device_model_ = "Desktop";
-	parameters->system_version_ = "Tiny Core Linux 11";
-	parameters->application_version_ = "1.0";
-	parameters->enable_storage_optimizer_ = true;
+	parameters->use_test_dc_				= false;
+ 	parameters->database_directory_			= "telegram_database";
+	parameters->files_directory_			= "";
+	parameters->use_file_database_			= true;
+ 	parameters->use_chat_info_database_		= true;
+ 	parameters->use_message_database_		= false;
+	parameters->use_secret_chats_			= true;
+	parameters->api_id_						= 1367564;
+	parameters->api_hash_					= "582ffce43327426097c4e71833e6e00f";
+	parameters->system_language_code_		= "en";
+	parameters->device_model_				= Config::value("DEVICE");
+	parameters->system_version_				= "";
+ 	parameters->application_version_		= "1.0";
+	parameters->enable_storage_optimizer_	= true;
+	parameters->ignore_file_names_			= false;
+	
 	return _call(TDMAKE(setTdlibParameters)(TDMOVE(parameters)));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_encryption_key()
 {
-	printf("Processing authorizationStateWaitEncryptionKey\n");
+	std::cout << "Processing authorizationStateWaitEncryptionKey" << std::endl;
 	return _call(TDMAKE(checkDatabaseEncryptionKey)(""));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_phone_number()
 {
-	printf("Processing authorizationStateWaitPhoneNumber\n");
+	std::cout << "Processing authorizationStateWaitPhoneNumber" << std::endl;
 	TDP(phoneNumberAuthenticationSettings) settings = TDMAKE(phoneNumberAuthenticationSettings)(true, false, false);
-	return _call(TDMAKE(setAuthenticationPhoneNumber)(MECHAN_PHONE, TDMOVE(settings)));
+	return _call(TDMAKE(setAuthenticationPhoneNumber)(Config::value("PHONE"), TDMOVE(settings)));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_code()
 {
-	printf("Processing authorizationStateWaitCode\n");
-	printf("Waiting confirmation code\n");
-	char code[64];
-	scanf("%64s", code);
+	std::cout << "Processing authorizationStateWaitCode" << std::endl;
+	std::cout << "Waiting confirmation code" << std::endl;
+	std::string code;
+	std::getline(std::cin, code);
 	return _call(TDMAKE(checkAuthenticationCode)(code));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_registration()
 {
-	printf("Processing authorizationStateWaitRegistration\n");
-	return _call(TDMAKE(registerUser)(MECHAN_FIRST_NAME, MECHAN_SECOND_NAME));
+	std::cout << "Processing authorizationStateWaitRegistration" << std::endl;
+	return _call(TDMAKE(registerUser)(Config::value("FIRST_NAME"), Config::value("SECOND_NAME")));
 }
 
 TDP(Object) mechan::TelegramInterface::_process_autorization_state_wait_password()
 {
-	printf("Processing authorizationStateWaitPassword\n");
-	return _call(TDMAKE(checkAuthenticationPassword)(MECHAN_PASSWORD));
+	std::cout << "Processing authorizationStateWaitPassword" << std::endl;
+	return _call(TDMAKE(checkAuthenticationPassword)(Config::value("PASSWORD")));
 }
 
 void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAuthorizationState) update_authorization_state)
@@ -175,7 +172,7 @@ void mechan::TelegramInterface::_process_update_authorization_state(TDP(updateAu
 		break;
 
 	case td::td_api::authorizationStateReady::ID:
-		printf("Got authorization\n");
+		std::cout << "Got authorization" << std::endl;
 		_status = Status::authorized;
 		break;
 	}
@@ -189,7 +186,7 @@ void mechan::TelegramInterface::_process_update_new_message_text(TDP(message) me
 		TDP(messageSenderUser) message_sender_user = TDMOVEAS(messageSenderUser, message->sender_);
 		TDP(Object) object = _call(TDMAKE(getUser)(message_sender_user->user_id_));
 		TDP(user) user = TDMOVEAS(user, object);
-		if (user->phone_number_ != "" && strstr(MECHAN_PHONE, user->phone_number_.data()) != nullptr) return;
+		if (user->phone_number_ != "" && strstr(Config::value("PHONE").data(), user->phone_number_.data()) != nullptr) return;
 		_receive_result.address.user_id = message_sender_user->user_id_;
 	}
 	else _receive_result.address.user_id = 0;
@@ -236,12 +233,12 @@ mechan::TelegramInterface::TelegramInterface()
 		td::Client::Response response;
 		if (_responses.size() == 0)
 		{
-			printf("Waiting for response\n");
+			std::cout << "Waiting for response" << std::endl;
 			response = _client->receive(std::numeric_limits<double>::infinity());
 		}
 		else
 		{
-			printf("Picking response from queue\n");
+			std::cout << "Picking response from queue" << std::endl;
 			response = std::move(_responses[0]);
 			_responses.erase(_responses.begin());
 		}
@@ -298,7 +295,7 @@ int mechan::TelegramInterface::loop()
 		//Receiving message
 		_receive();
 		if (!_receive_result.ok || _receive_result.message.empty()) continue;		
-		printf("Got message\n");
+		std::cout << "Got message" << std::endl;
 		std::string question;
 		question.resize(ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_receive_result.message.data(), ' ', nullptr));
 		ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_receive_result.message.data(), ' ', &question[0]);
@@ -319,7 +316,7 @@ int mechan::TelegramInterface::loop()
 		
 		//Sending message
 		_send(answer8, _receive_result.address);
-		printf("Sent result\n");
+		std::cout << "Sent result" << std::endl;
 		
 		//Post-processing commands
 		if (_receive_result.message.front() == '!' || _receive_result.message.front() == '?')
@@ -351,5 +348,3 @@ int main()
 {
 	return _main();
 }
-
-#endif

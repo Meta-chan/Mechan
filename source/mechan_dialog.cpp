@@ -1,5 +1,4 @@
 #include "../header/mechan.h"
-#include "../header/mechan_directory.h"
 #include <assert.h>
 #include <stdio.h>
 #include <ir_resource/ir_file_resource.h>
@@ -7,7 +6,7 @@
 bool mechan::Dialog::_parse() noexcept
 {
 	//Open text file
-	ir::FileResource dialog = fopen(MECHAN_DIR "\\data\\dialog.txt", "r");
+	ir::FileResource dialog = fopen("data\\dialog.txt", "r");
 	if (dialog == nullptr) return false;
 	_mechan->print_event_log("Dialog file found");
 	fseek(dialog, 0, SEEK_END);
@@ -15,7 +14,7 @@ bool mechan::Dialog::_parse() noexcept
 	fseek(dialog, 0, SEEK_SET);
 
 	//Open database
-	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::neww, nullptr);
+	_dialog = new ir::N2STDatabase(SS("data\\dialog"), ir::Database::create_mode::neww, nullptr);
 	if (!_dialog->ok() || _dialog->set_ram_mode(true, true) != ir::ec::ok)
 	{
 		delete _dialog;
@@ -70,7 +69,7 @@ bool mechan::Dialog::_parse() noexcept
 mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 {
 	//First try
-	_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
+	_dialog = new ir::N2STDatabase(SS("data\\dialog"), ir::Database::create_mode::read, nullptr);
 	if (_dialog->ok() && _dialog->set_ram_mode(true, true) == ir::ec::ok)
 	{
 		_mechan->print_event_log("Dialog database found");
@@ -80,7 +79,7 @@ mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
 	//Second try
 	if (_parse())
 	{
-		_dialog = new ir::N2STDatabase(WIDE_MECHAN_DIR "\\data\\dialog", ir::Database::create_mode::read, nullptr);
+		_dialog = new ir::N2STDatabase(SS("data\\dialog"), ir::Database::create_mode::read, nullptr);
 		if (_dialog->ok() && _dialog->set_ram_mode(true, true) == ir::ec::ok)
 		{
 			_mechan->print_event_log("Dialog database found");

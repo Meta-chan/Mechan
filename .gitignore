@@ -30,7 +30,8 @@ Thumbs.db
 
 # Mechan #
 ##########
-data/
+data/*
+!data/mechan.png
 td/
+telegram_database/
 build/
-**/log.txt

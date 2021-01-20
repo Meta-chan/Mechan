@@ -1,5 +1,4 @@
 #include "../header/mechan.h"
-#include "../header/mechan_directory.h"
 #include "../header/mechan_parse.h"
 
 mechan::Mechan::Mechan() noexcept :

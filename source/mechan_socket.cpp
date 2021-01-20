@@ -1,7 +1,9 @@
 #include "../header/mechan_socket.h"
+#include "../header/mechan_config.h"
 
 #ifdef _WIN32
 	#include <ws2tcpip.h>
+	#pragma comment(lib, "ws2_32.lib")
 #else
 	#include <unistd.h>
 	#include <sys/time.h>
@@ -16,10 +18,8 @@
 	}
 #endif
 #include <string.h>
+#include <stdlib.h>
 #include <assert.h>
-
-#define SERVER_IP "192.168.178.3"
-#define SERVER_PORT 30000
 
 mechan::Server::Server() noexcept
 {
@@ -37,8 +37,8 @@ mechan::Server::Server() noexcept
 	sockaddr_in address;
 	memset(&address, 0, sizeof(sockaddr_in));
 	address.sin_family = AF_INET;
-	address.sin_port = htons(SERVER_PORT);
-	if (inet_pton(AF_INET, SERVER_IP, &address.sin_addr) != 1) return;
+	address.sin_port = htons(atoi(Config::value("PORT").data()));
+	if (inet_pton(AF_INET, Config::value("IP").data(), &address.sin_addr) != 1) return;
 	if (bind(_socket, (sockaddr*)&address, sizeof(sockaddr_in)) == SOCKET_ERROR) return;
 	
 	//Listening socket
@@ -177,8 +177,8 @@ mechan::Client::Client() noexcept
 	sockaddr_in address;
 	memset(&address, 0, sizeof(sockaddr_in));
 	address.sin_family = AF_INET;
-	address.sin_port = htons(SERVER_PORT);
-	if (inet_pton(AF_INET, SERVER_IP, &address.sin_addr) != 1) return;
+	address.sin_port = htons(atoi(Config::value("PORT").data()));
+	if (inet_pton(AF_INET, Config::value("IP").data(), &address.sin_addr) != 1) return;
 	::connect(_socket, (sockaddr*)&address, sizeof(sockaddr_in));
 
 	//Wait for conenction

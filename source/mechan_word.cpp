@@ -1,6 +1,5 @@
 #include "../header/mechan.h"
 #include "../header/mechan_character.h"
-#include "../header/mechan_directory.h"
 #include "../header/mechan_parse.h"
 #include <assert.h>
 #include <ir_resource/ir_file_resource.h>
@@ -57,7 +56,7 @@ const unsigned int *mechan::Word::WordInfo::synonym_groups() const noexcept
 
 bool mechan::Word::_load() noexcept
 {
-	_words = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\words", ir::Database::create_mode::read, nullptr);
+	_words = new ir::S2STDatabase(SS("data\\words"), ir::Database::create_mode::read, nullptr);
 	if (!_words->ok() || _words->set_ram_mode(true, true) != ir::ec::ok)
 	{
 		delete _words;
@@ -125,7 +124,7 @@ bool mechan::Word::_parse_morphology() noexcept
 	};
 	
 	//Open file
-	ir::FileResource morphology = fopen(MECHAN_DIR "\\data\\morphology.txt", "r");
+	ir::FileResource morphology = fopen("data\\morphology.txt", "r");
 	_mechan->print_event_log("Morphology file found");
 	if (morphology == nullptr) return false;
 	fseek(morphology, 0, SEEK_END);
@@ -323,7 +322,7 @@ bool mechan::Word::_parse_synonym() noexcept
 	};
 	
 	//Open file
-	ir::FileResource synonym = fopen(MECHAN_DIR "\\data\\synonym.txt", "r");
+	ir::FileResource synonym = fopen("data\\synonym.txt", "r");
 	if (synonym == nullptr) return false;
 	_mechan->print_event_log("Synonym file found");
 	fseek(synonym, 0, SEEK_END);
@@ -464,7 +463,7 @@ unsigned int mechan::Word::_pack_morphology_group_occurencies(unsigned int group
 
 bool mechan::Word::_pack() noexcept
 {
-	_words = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\words", ir::Database::create_mode::neww, nullptr);
+	_words = new ir::S2STDatabase(SS("data\\words"), ir::Database::create_mode::neww, nullptr);
 	if (!_words->ok() || _words->set_ram_mode(true, true) != ir::ec::ok)
 	{
 		delete _words;
@@ -516,7 +515,7 @@ bool mechan::Word::_pack() noexcept
 	}
 
 	delete _words;
-	_words = new ir::S2STDatabase(WIDE_MECHAN_DIR "\\data\\words", ir::Database::create_mode::read, nullptr);
+	_words = new ir::S2STDatabase(SS("data\\words"), ir::Database::create_mode::read, nullptr);
 	if (!_words->ok() || _words->set_ram_mode(true, true) != ir::ec::ok)
 	{
 		delete _words;
@@ -548,7 +547,7 @@ bool mechan::Word::word_info(std::string lowercase_word, const WordInfo **info, 
 	ir::ConstBlock key(lowercase_word.data(), lowercase_word.size());
 	ir::ConstBlock data;
 	if (_words->read(key, &data) != ir::ec::ok) return false;
-	*info_size = data.size();
+	*info_size = (unsigned int)data.size();
 	*info = (WordInfo*)data.data();
 	return true;
 }
