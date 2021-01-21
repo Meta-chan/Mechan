@@ -1,8 +1,11 @@
 #include "../header/mechan.h"
 #include "../header/mechan_parse.h"
-#include <omp.h>
+#ifdef OMP_FOUND
+	#include <omp.h>
+#endif
 #include <time.h>
 #include <limits>
+#include <algorithm>
 
 bool mechan::Core::_intersect(const std::vector<unsigned int> *a, const unsigned int *b, unsigned int bsize) const noexcept
 {
@@ -55,15 +58,23 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 	std::vector<Best> best;
 
 	//Processing random messages
+	#ifdef OMP_FOUND
 	#pragma omp parallel shared(question_syngroups, best, thread_best_size)
 	{
 		#pragma omp single
 		{
 			best.resize(omp_get_num_threads() * thread_best_size);
 		}
+	#else
+		best.resize(thread_best_size);
+	#endif
 		std::uniform_int_distribution<unsigned int> distribution(0, _mechan->dialog()->count() - 1);
 		std::default_random_engine engine;
-		engine.seed((unsigned int)time(nullptr) + omp_get_thread_num());
+		#ifdef OMP_FOUND
+			engine.seed((unsigned int)time(nullptr) + omp_get_thread_num());
+		#else
+			engine.seed((unsigned int)time(nullptr));
+		#endif
 		clock_t c = clock();
 
 		while (clock() - c < 10 * CLOCKS_PER_SEC)
@@ -95,7 +106,11 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 
 			//Inserting in best table
 			unsigned int place_in_best = (unsigned int)-1;
-			unsigned int thread_first_best = thread_best_size * omp_get_thread_num();
+			#ifdef OMP_FOUND
+				unsigned int thread_first_best = thread_best_size * omp_get_thread_num();
+			#else
+				unsigned int thread_first_best = 0;
+			#endif
 			unsigned int thread_last_best = thread_first_best + thread_best_size;
 			for (unsigned int i = thread_first_best; i < thread_last_best; i++)
 			{
@@ -113,7 +128,9 @@ std::string mechan::Core::answer(const std::string question)  noexcept
 				best[place_in_best].heuristics = heuritics;
 			}
 		}
+	#ifdef OMP_FOUND
 	}
+	#endif
 
 	//Mixing outputs of threads
 	std::sort(best.begin(), best.end(), [](const Best &a, const Best &b) { return a.heuristics < b.heuristics; });

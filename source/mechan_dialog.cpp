@@ -1,6 +1,7 @@
 #include "../header/mechan.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <ir_resource/ir_file_resource.h>
 
 bool mechan::Dialog::_parse() noexcept

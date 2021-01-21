@@ -3,9 +3,6 @@ set VCPKG_DIR=E:/Project/_lib/vcpkg
 set IR_DIR=E:/Project/_ir
 REM set ARCH=-A x64
 
-if not exist data (
-	mkdir data
-)
 if not exist build (
 	mkdir build
 )
