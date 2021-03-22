@@ -1,7 +1,7 @@
 #pragma once
 
-#include <ir_database/ir_s2st_database.h>
-#include <ir_database/ir_n2st_database.h>
+#include <ir/s2st_database.h>
+#include <ir/n2st_database.h>
 #include <map>
 #include <set>
 #include <vector>

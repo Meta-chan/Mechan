@@ -1,3 +1,4 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan_parse.h"
 #include "../header/mechan_character.h"
 

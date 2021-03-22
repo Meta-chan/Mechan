@@ -12,10 +12,10 @@ namespace mechan
 	class Mechan
 	{
 	private:
-		Server::Address _event_log_address;
+		TCPAddress _event_log_address;
 		unsigned int _event_log_messages = 0;
 
-		Server _server;
+		TCPServer _server;
 		Dialog _dialog;
 		Word _word;
 		Neuro _neuro;

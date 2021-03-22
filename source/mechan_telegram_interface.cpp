@@ -1,3 +1,4 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan_socket.h"
 #include "../header/mechan_parse.h"
 #include "../header/mechan_config.h"
@@ -12,8 +13,7 @@
 #include <limits>
 #include <chrono>
 #include <thread>
-#define IR_IMPLEMENT
-#include <ir_codec.h>
+#include <ir/encoding.h>
 
 #define TDP(TDCLASSNAME) ::td::td_api::object_ptr<::td::td_api::TDCLASSNAME>
 #define TDMOVE(TDOBJECT) ::td::td_api::move_object_as<decltype(TDOBJECT)::element_type>(TDOBJECT)
@@ -297,8 +297,8 @@ int mechan::TelegramInterface::loop()
 		if (!_receive_result.ok || _receive_result.message.empty()) continue;		
 		std::cout << "Got message" << std::endl;
 		std::string question;
-		question.resize(ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_receive_result.message.data(), ' ', nullptr));
-		ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_receive_result.message.data(), ' ', &question[0]);
+		question.resize(ir::Encoding::recode<ir::Encoding::UTF8, ir::Encoding::CP1251>(nullptr, _receive_result.message.data(), ""));
+		ir::Encoding::recode<ir::Encoding::UTF8, ir::Encoding::CP1251>(&question[0], _receive_result.message.data(), "");
 			
 		//Sending to Mechan
 		_mechan_client.send(question, _receive_result.address);
@@ -311,8 +311,8 @@ int mechan::TelegramInterface::loop()
 			else std::this_thread::sleep_for(std::chrono::seconds(1));
 		}
 		std::string answer8;
-		answer8.resize(ir::Codec::recode<ir::Codec::CP1251, ir::Codec::UTF8>(_receive_result.message.data(), ' ', nullptr));
-		ir::Codec::recode<ir::Codec::CP1251, ir::Codec::UTF8>(_receive_result.message.data(), ' ', &answer8[0]);
+		answer8.resize(ir::Encoding::recode<ir::Encoding::CP1251, ir::Encoding::UTF8>(nullptr, _receive_result.message.data(), ""));
+		ir::Encoding::recode<ir::Encoding::CP1251, ir::Encoding::UTF8>(&answer8[0], _receive_result.message.data(), "");
 		
 		//Sending message
 		_send(answer8, _receive_result.address);

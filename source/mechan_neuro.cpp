@@ -1,6 +1,8 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan.h"
 #include "../header/mechan_parse.h"
 #include "../header/mechan_character.h"
+#include <ir/print.h>
 #include <time.h>
 #include <assert.h>
 
@@ -93,19 +95,19 @@ void mechan::Neuro::train() noexcept
 
 	Parsed parsed;
 	parse_punctuation(question, &parsed);
-	_unroll_message(&parsed, _neuro->get_input()->data());
+	_unroll_message(&parsed, _neuro->get_input()->data(0));
 
 	if ((_distribution(_generator) % (1 + negative_pro_positive)) == 0)
 	{
 		//positive training
 		parse_punctuation(answer, &parsed);
-		_unroll_message(&parsed, _neuro->get_input()->data() + message_size);
+		_unroll_message(&parsed, _neuro->get_input()->data(0) + message_size);
 		_neuro->forward();
-		_neuro->get_goal()->at(0) = 1.0;
+		_neuro->get_goal()->at(0, 0) = 1.0;
 		_neuro->backward();
 
 		char message[512];
-		sprintf(message, "Positive training: %lf", _neuro->get_output()->at(0));
+		ir::print(message, 512, "Positive training: %lf", _neuro->get_output()->at(0, 0));
 		_mechan->print_event_log(message);
 	}
 	else while (true)
@@ -116,13 +118,13 @@ void mechan::Neuro::train() noexcept
 		if (_mechan->dialog()->message(nmessage, &random))
 		{
 			parse_punctuation(random, &parsed);
-			_unroll_message(&parsed, _neuro->get_input()->data() + message_size);
+			_unroll_message(&parsed, _neuro->get_input()->data(0) + message_size);
 			_neuro->forward();
-			_neuro->get_goal()->at(0) = -1.0;
+			_neuro->get_goal()->at(0, 0) = -1.0;
 			_neuro->backward();
 
 			char message[512];
-			sprintf(message, "Negative training: %lf", _neuro->get_output()->at(0));
+			ir::print(message, 512, "Negative training: %lf", _neuro->get_output()->at(0, 0));
 			_mechan->print_event_log(message);
 			break;
 		}
@@ -138,10 +140,10 @@ void mechan::Neuro::train() noexcept
 
 double mechan::Neuro::qestion_answer(const Parsed *question, const Parsed *answer) noexcept
 {
-	_unroll_message(question, _neuro->get_input()->data());
-	_unroll_message(answer, _neuro->get_input()->data() + message_size);
+	_unroll_message(question, _neuro->get_input()->data(0));
+	_unroll_message(answer, _neuro->get_input()->data(0) + message_size);
 	_neuro->forward();
-	return _neuro->get_output()->at(0);
+	return _neuro->get_output()->at(0, 0);
 }
 
 mechan::Neuro::~Neuro() noexcept

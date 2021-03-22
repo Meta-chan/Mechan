@@ -1,3 +1,4 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan.h"
 #include "../header/mechan_parse.h"
 #ifdef OMP_FOUND

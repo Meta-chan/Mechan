@@ -1,98 +1,47 @@
 #pragma once
 
-#ifdef _WIN32
-	#include <WinSock2.h>
-	#include <Ws2def.h>
-#else
-	#include <netinet/in.h>
-#endif
-
+#include <ir/types.h>
+#include <ir/tcp.h>
 #include <string>
 #include <vector>
 
 namespace mechan
 {
-	#ifndef _WIN32
-		typedef int SOCKET;
-	#endif
-
-
-	class Server
+	struct TCPAddress
 	{
-	private:
-		struct Header
-		{
-			unsigned long long int length;
-			unsigned long long int chat_id;
-			unsigned long long int user_id;
-		};
-
-		struct Client
-		{
-			SOCKET socket;
-			sockaddr_in address;
-		};
-
-		bool _ok = false;
-		SOCKET _socket;
-		sockaddr_in _address;
-		std::vector<char> _buffer;
-		std::vector<Client> _clients;
-
-	public:
-		struct Address
-		{
-			sockaddr_in address;
-			unsigned long long int chat_id;
-			unsigned long long int user_id;
-		};
-
-		struct ReceiveResult
-		{
-			bool ok;
-			std::string message;
-			Address address;
-		};
-
-		Server()											noexcept;
-		bool ok()											const noexcept;
-		bool send(const std::string string, Address address)noexcept;
-		ReceiveResult receive()								noexcept;
-		~Server()											noexcept;
+		ir::IP ip;
+		ir::uint64 chat_id;
+		ir::uint64 user_id;
 	};
 
-	class Client
+	struct TCPHeader
+	{
+		ir::uint64 size;
+		ir::uint64 chat_id;
+		ir::uint64 user_id;
+	};
+
+	class TCPServer : ir::TCPServer
 	{
 	private:
-		struct Header
-		{
-			unsigned long long int length;
-			unsigned long long int chat_id;
-			unsigned long long int user_id;
-		};
-
-		bool _ok = false;
-		SOCKET _socket;
 		std::vector<char> _buffer;
 
 	public:
-		struct Address
-		{
-			unsigned long long int chat_id;
-			unsigned long long int user_id;
-		};
+		TCPServer() noexcept;
+		bool ok() const noexcept;
+		bool send(TCPAddress address, const std::string message) noexcept;
+		bool receive(TCPAddress *address, std::string *message) noexcept;
+	};
 
-		struct ReceiveResult
-		{
-			bool ok;
-			std::string message;
-			Address address;
-		};
+	class TCPClient : ir::TCPClient
+	{
+	private:
+		std::vector<char> _buffer;
 
-		Client()											noexcept;
-		bool ok()											const noexcept;
-		bool send(const std::string string, Address address)noexcept;
-		ReceiveResult receive()								noexcept;
-		~Client()											noexcept;
+	public:
+		TCPClient() noexcept;
+		bool ok() const noexcept; 
+		bool send(TCPAddress address, const std::string message) noexcept;
+		bool receive(TCPAddress *address, std::string *message) noexcept;
 	};
 }

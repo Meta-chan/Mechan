@@ -1,6 +1,6 @@
 #!/bin/sh
 TD_DIR=~/Mechan/td
-IR_DIR=~/_ir
+IR_DIR=~/ir
 #ARCH=-A x64
 
 if [ ! -d build ]; then

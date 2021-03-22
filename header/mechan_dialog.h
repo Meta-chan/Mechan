@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ir_database/ir_n2st_database.h>
+#include <ir/n2st_database.h>
 #include <string>
 
 namespace mechan

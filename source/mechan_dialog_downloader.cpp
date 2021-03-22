@@ -1,5 +1,4 @@
 #ifdef _WIN32
-	#define _CRT_SECURE_NO_WARNINGS
 	#include <windows.h>
 	#include <winhttp.h>
 	#pragma comment(lib, "winhttp.lib")
@@ -7,16 +6,14 @@
 
 #include "../header/mechan_character.h"
 
-#define IR_IMPLEMENT
-#include <ir_codec.h>
-#include <ir_container/ir_quiet_vector.h>
-#ifdef _WIN32
-	#include <ir_resource/ir_hinternet_resource.h>
-#endif
+#define IR_INCLUDE 'i'
+#include <ir/encoding.h>
+#include <ir/quiet_vector.h>
+#include <ir/resource.h>
+#include <ir/file.h>
+#include <ir/print.h>
 
 #include <vector>
-#include <string>
-#include <stdio.h>
 
 namespace mechan
 {
@@ -50,7 +47,7 @@ namespace mechan
 		ir::QuietVector<char> _page_utf8;
 		ir::QuietVector<char> _page_cp1251;
 		std::vector<std::string> _dialog;
-		FILE *_file = nullptr;
+		ir::File _file;
 		Resource _resource;
 
 		bool _request_new_dialog = true;
@@ -397,8 +394,9 @@ bool mechan::DialogDownloader::_download_page(const char *object)
 {
 	#ifdef _WIN32
 		wchar_t object16[64];
-		ir::Codec::recode<ir::Codec::UTF8, ir::Codec::UTF16>(object, ' ', object16);
-		ir::HInternetResource get_request = WinHttpOpenRequest(_connection, L"GET", object16,
+		ir::Encoding::recode<ir::Encoding::UTF8, ir::Encoding::UTF16>(object16, object, L"");
+		ir::Resource<HINTERNET> get_request([](HINTERNET &h) { if (h != NULL) { WinHttpCloseHandle(h); h = NULL; }});
+		get_request = WinHttpOpenRequest(_connection, L"GET", object16,
 			NULL, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, WINHTTP_FLAG_SECURE);
 		if (get_request == NULL) return false;
 		if (!WinHttpSendRequest(get_request, WINHTTP_NO_ADDITIONAL_HEADERS, 0, nullptr, 0, 0, 0)) return false;
@@ -444,8 +442,8 @@ bool mechan::DialogDownloader::_download_page(const char *object)
 	{
 		if (strstr(_page_utf8.data(), "HTTP ERROR 404") != nullptr) return false;
 	}
-	if (!_page_cp1251.resize(ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_page_utf8.data(), ' ', nullptr) + 1)) return false;
-	ir::Codec::recode<ir::Codec::UTF8, ir::Codec::CP1251>(_page_utf8.data(), ' ', _page_cp1251.data());
+	if (!_page_cp1251.resize(ir::Encoding::recode<ir::Encoding::UTF8, ir::Encoding::CP1251>(nullptr, _page_utf8.data(), "") + 1)) return false;
+	ir::Encoding::recode<ir::Encoding::UTF8, ir::Encoding::CP1251>(_page_cp1251.data(), _page_utf8.data(), "");
 	if (!_page_cp1251.push_back('\0')) return false;
 	return true;
 }
@@ -553,7 +551,7 @@ mechan::DialogDownloader::DialogDownloader(Resource resource)
 		if (_connection == NULL) return;
 	#endif
 
-	_file = fopen("data\\dialog.txt", "ab");
+	_file.open(SS("data\\dialog.txt"), SS("ab"));
 }
 
 void mechan::DialogDownloader::_write()
@@ -593,9 +591,9 @@ void mechan::DialogDownloader::_write()
 	printf("%u phrases written\n", (unsigned int)_dialog.size());
 	for (size_t i = 0; i < _dialog.size(); i++)
 	{
-		fprintf(_file, "%s\n", _dialog[i].data());
+		ir::print(_file, "%s\n", _dialog[i].data());
 	}
-	if (_dialog.size() != 0) fprintf(_file, "\n");
+	if (_dialog.size() != 0) ir::print(_file, "\n");
 	_dialog.resize(0);
 }
 
@@ -611,8 +609,8 @@ void mechan::DialogDownloader::download()
 		//Forming fic page with /
 		char page_name[64];
 		size_t page_name_len;
-		if (_resource == Resource::ficbook_net) page_name_len = sprintf(page_name, "/readfic/%u/", fanfic_number);
-		else page_name_len = sprintf(page_name, "/fic%u/", fanfic_number);
+		if (_resource == Resource::ficbook_net) page_name_len = ir::print(page_name, 64, "/readfic/%u/", fanfic_number);
+		else page_name_len = ir::print(page_name, 64, "/fic%u/", fanfic_number);
 
 		//Downoading and filtering page
 		if (!_download_page(page_name)) { printf("Failed\n"); fail_count++; continue; }
@@ -641,7 +639,7 @@ void mechan::DialogDownloader::download()
 			}
 			else for (unsigned int i = 0; i < chapter_numbers.size(); i++)
 			{
-				sprintf(page_name + page_name_len, "%u", chapter_numbers[i]);
+				ir::print(page_name + page_name_len, "%u", chapter_numbers[i]);
 				if (_download_page(page_name) && _filter_body()) { printf("Chapter parsed\n"); _parse(); }
 			}
 			_write();
@@ -650,7 +648,7 @@ void mechan::DialogDownloader::download()
 		{
 			for (unsigned int i = 0; true; i++)
 			{
-				sprintf(page_name, "read.php?id=%u&chapter=%u", fanfic_number, i);
+				ir::print(page_name, "read.php?id=%u&chapter=%u", fanfic_number, i);
 				if (!_download_page(page_name)) break;
 				if (_filter_body()) { printf("Chapter parsed\n"); _parse(); }
 			}
@@ -664,7 +662,6 @@ mechan::DialogDownloader::~DialogDownloader()
 	#ifdef _WIN32
 		if (_connection != NULL) WinHttpCloseHandle(_connection);
 		if (_session != NULL) WinHttpCloseHandle(_session);
-		if (_file != nullptr) fclose(_file);
 	#endif
 }
 

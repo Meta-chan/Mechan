@@ -1,5 +1,7 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan.h"
 #include "../header/mechan_parse.h"
+#include <ir/print.h>
 
 mechan::Mechan::Mechan() noexcept :
 	_dialog(this),
@@ -29,7 +31,7 @@ void mechan::Mechan::print_event_log(const std::string string) noexcept
 	printf("%s\n", string.data());
 	if (_event_log_messages > 0)
 	{
-		if (!_server.send(string, _event_log_address)) _event_log_messages = 0;
+		if (!_server.send(_event_log_address, string)) _event_log_messages = 0;
 		else _event_log_messages--;
 	}
 }
@@ -47,64 +49,65 @@ int mechan::Mechan::main() noexcept
 		//Reading and answering
 		while (true)
 		{
-			Server::ReceiveResult result = _server.receive();
+			TCPAddress address;
+			std::string message;
 			//No message
-			if (!result.ok) break;
+			if (!_server.receive(&address, &message)) break;
 			//Empry message
-			else if (result.message.empty()) {}
+			else if (message.empty()) {}
 			//Non-command
-			else if (result.message.front() != '?' && result.message.front() != '!')
+			else if (message.front() != '?' && message.front() != '!')
 			{	
-				_server.send(_core.answer(result.message), result.address);
+				_server.send(address, _core.answer(message));
 			}
 			else
 			{
 				std::vector<std::string> parsed;
-				parse_space(result.message, &parsed);
+				parse_space(message, &parsed);
 				// !coefficient
-				if (result.message.front() == '!'
+				if (message.front() == '!'
 					&& parsed.size() == 2
 					&& parsed[0] == "coefficient"
 					&& strtod(parsed[1].data(), nullptr) > 0)
 				{
 					_neuro.set_coefficient(strtod(parsed[1].data(), nullptr));
-					_server.send("!", result.address);
+					_server.send(address, "!");
 				}
 				// ?coefficient
-				else if (result.message.front() == '?'
+				else if (message.front() == '?'
 					&& parsed.size() == 1
 					&& parsed[0] == "coefficient")
 				{
 					char strcoef[32];
-					sprintf(strcoef, "%lf", _neuro.get_coefficient());
-					_server.send(strcoef, result.address);
+					ir::print(strcoef, 32, "%lf", _neuro.get_coefficient());
+					_server.send(address, strcoef);
 				}
 				// !shutdown
-				else if (result.message.front() == '!'
+				else if (message.front() == '!'
 					&& parsed.size() == 1
 					&& parsed[0] == "shutdown")
 				{
-					_server.send("!", result.address);
+					_server.send(address, "!");
 					return 0;
 				}
 				// !log
-				else if (result.message.front() == '!'
+				else if (message.front() == '!'
 					&& parsed.size() == 2
 					&& parsed[0] == "log"
 					&& strtol(parsed[1].data(), nullptr, 10) > 0)
 				{
-					_event_log_address = result.address;
+					_event_log_address = address;
 					_event_log_messages = strtol(parsed[1].data(), nullptr, 10);
-					_server.send("!", result.address);
+					_server.send(address, "!");
 				}
 				// ?
-				else if (result.message.front() == '?'
+				else if (message.front() == '?'
 					&& parsed.size() == 0)
 				{
-					_server.send("!", result.address);
+					_server.send(address, "!");
 				}
 				// Invalid
-				else _server.send("?", result.address);
+				else _server.send(address, "?");
 			}
 		}
 

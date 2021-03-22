@@ -1,8 +1,10 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan.h"
 #include "../header/mechan_character.h"
 #include "../header/mechan_parse.h"
+#include <ir/print.h>
+#include <ir/file.h>
 #include <assert.h>
-#include <ir_resource/ir_file_resource.h>
 
 bool mechan::Word::MorphologyCharacteristics::get(MorphologyCharacteristic c) const noexcept
 {
@@ -80,7 +82,7 @@ bool mechan::Word::_parse_dialog() noexcept
 		{
 			reported = (unsigned int)(100.0 * index / _mechan->dialog()->count());
 			char buffer[64];
-			sprintf(buffer, "Dialog words counting %u", reported);
+			ir::print(buffer, 64, "Dialog words counting %u", reported);
 			_mechan->print_event_log(buffer);
 		}
 
@@ -124,12 +126,10 @@ bool mechan::Word::_parse_morphology() noexcept
 	};
 	
 	//Open file
-	ir::FileResource morphology = fopen("data\\morphology.txt", "r");
+	ir::File morphology(SS("data\\morphology.txt"), SS("r"));
 	_mechan->print_event_log("Morphology file found");
-	if (morphology == nullptr) return false;
-	fseek(morphology, 0, SEEK_END);
-	unsigned int morphology_size = ftell(morphology);
-	fseek(morphology, 0, SEEK_SET);
+	if (!morphology.ok()) return false;
+	ir::uint64 morphology_size = morphology.size();
 	
 	//Init variables
 	State state = State::double_endline_wait_word;
@@ -146,7 +146,7 @@ bool mechan::Word::_parse_morphology() noexcept
 	{
 		//Read and process symbol
 		char c;
-		if (fread(&c, 1, 1, morphology) == 0)
+		if (morphology.read(&c, 1) == 0)
 		{
 			_parse_morphology_add(group, lowercase_word, characteristics);
 			break;
@@ -284,7 +284,7 @@ bool mechan::Word::_parse_morphology() noexcept
 		{
 			reported = (unsigned int)(100.0 * position / morphology_size);
 			char buffer[64];
-			sprintf(buffer, "Morphology file parsing %u", reported);
+			ir::print(buffer, 64, "Morphology file parsing %u", reported);
 			_mechan->print_event_log(buffer);
 		}
 	}
@@ -322,12 +322,10 @@ bool mechan::Word::_parse_synonym() noexcept
 	};
 	
 	//Open file
-	ir::FileResource synonym = fopen("data\\synonym.txt", "r");
-	if (synonym == nullptr) return false;
+	ir::File synonym(SS("data\\synonym.txt"), SS("r"));
+	if (!synonym.ok()) return false;
 	_mechan->print_event_log("Synonym file found");
-	fseek(synonym, 0, SEEK_END);
-	unsigned int synonym_size = ftell(synonym);
-	fseek(synonym, 0, SEEK_SET);
+	ir::uint64 synonym_size = synonym.size();
 
 	//Init variables
 	State  state = State::delimiter_wait_word;
@@ -341,7 +339,7 @@ bool mechan::Word::_parse_synonym() noexcept
 	{
 		//Read and process symbol
 		char c;
-		if (fread(&c, 1, 1, synonym) == 0)
+		if (synonym.read(&c, 1) == 0)
 		{
 			_parse_synonym_add(group, lowercase_word);
 			break;
@@ -441,7 +439,7 @@ bool mechan::Word::_parse_synonym() noexcept
 		{
 			reported = (unsigned int)(100.0 * position / synonym_size);
 			char buffer[64];
-			sprintf(buffer, "Synonym file parsing %u", reported);
+			ir::print(buffer, 64, "Synonym file parsing %u", reported);
 			_mechan->print_event_log(buffer);
 		}
 	}
@@ -504,8 +502,8 @@ bool mechan::Word::_pack() noexcept
 		k = 0;
 		for (auto j = i->second.synonym_groups.cbegin(); j != i->second.synonym_groups.cend(); j++, k++)
 			word_info->morphology_groups()[k] = *j;
-		ir::ConstBlock key(lowercase_word.data(), lowercase_word.size());
-		ir::ConstBlock data(_buffer.data(), _buffer.size());
+		ir::Block key(lowercase_word.data(), lowercase_word.size());
+		ir::Block data(_buffer.data(), _buffer.size());
 		if (_words->insert(key, data) != ir::ec::ok)
 		{
 			delete _words;
@@ -544,8 +542,8 @@ bool mechan::Word::ok() const noexcept
 bool mechan::Word::word_info(std::string lowercase_word, const WordInfo **info, unsigned int *info_size) const noexcept
 {
 	assert(ok());
-	ir::ConstBlock key(lowercase_word.data(), lowercase_word.size());
-	ir::ConstBlock data;
+	ir::Block key(lowercase_word.data(), lowercase_word.size());
+	ir::Block data;
 	if (_words->read(key, &data) != ir::ec::ok) return false;
 	*info_size = (unsigned int)data.size();
 	*info = (WordInfo*)data.data();

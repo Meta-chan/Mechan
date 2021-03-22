@@ -1,1 +1,1 @@
-#pragma once
+#define IR_INCLUDE 'i'

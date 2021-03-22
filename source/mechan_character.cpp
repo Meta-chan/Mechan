@@ -1,3 +1,4 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan_character.h"
 
 bool mechan::is_latin(char c) noexcept

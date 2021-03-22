@@ -5,7 +5,7 @@
 #include <string>
 #include <random>
 #include <time.h>
-#include <ir_neuro.h>
+#include <ir/neuro.h>
 
 namespace mechan
 {

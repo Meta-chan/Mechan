@@ -1,4 +1,6 @@
+#define IR_INCLUDE 'i'
 #include "../header/mechan_config.h"
+#include <ir/file.h>
 #include <stdio.h>
 
 bool mechan::Config::_initialized = false;
@@ -7,8 +9,8 @@ std::map<std::string, std::string> mechan::Config::_config;
 void mechan::Config::_initialize() noexcept
 {
 	_initialized = true;
-	FILE *file = fopen("mechan_config", "r");
-	if (file == nullptr) return;
+	ir::File file(SS("mechan_config"), SS("r"));
+	if (!file.ok()) return;
 	
 	enum class State
 	{
@@ -23,10 +25,9 @@ void mechan::Config::_initialize() noexcept
 	while(true)
 	{
 		char c;
-		if (fread(&c, 1, 1, file) == 0)
+		if (file.read(&c, 1) == 0)
 		{
 			if (!name.empty()) _config[name] = value;
-			fclose(file);
 			return;
 		}
 		else switch (state)
