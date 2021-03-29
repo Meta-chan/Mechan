@@ -551,7 +551,7 @@ mechan::DialogDownloader::DialogDownloader(Resource resource)
 		if (_connection == NULL) return;
 	#endif
 
-	_file.open(SS("data\\dialog.txt"), SS("ab"));
+	_file.open(SS("data/dialog.txt"), SS("ab"));
 }
 
 void mechan::DialogDownloader::_write()
@@ -599,12 +599,12 @@ void mechan::DialogDownloader::_write()
 
 void mechan::DialogDownloader::download()
 {
-	unsigned int fanfic_number = _resource == Resource::ficbook_net ? 0 : 65400;
-	unsigned int fail_count = 0;
+	size_t fanfic_number = _resource == Resource::ficbook_net ? 0 : 65400;
+	size_t fail_count = 0;
 
 	while (fail_count < 3000)
 	{
-		printf("Processing fanfic #%u... ", ++fanfic_number);
+		printf("Processing fanfic #%u... ", (unsigned int)++fanfic_number);
 
 		//Forming fic page with /
 		char page_name[64];
@@ -620,13 +620,13 @@ void mechan::DialogDownloader::download()
 		if (_resource == Resource::ficbook_net)
 		{
 			//Searching for references to chapters
-			std::vector<unsigned int> chapter_numbers;
+			std::vector<size_t> chapter_numbers;
 			char *entry = _page_cp1251.data();
 			while (true)
 			{
 				entry = strstr(entry, page_name);
 				if (entry == nullptr) break;
-				unsigned int chapter_number = strtol(entry + page_name_len, &entry, 10);
+				size_t chapter_number = strtol(entry + page_name_len, &entry, 10);
 				if (chapter_number != 0 && (chapter_numbers.empty() || chapter_numbers.back() != chapter_number))
 					chapter_numbers.push_back(chapter_number);
 				entry++;
@@ -637,7 +637,7 @@ void mechan::DialogDownloader::download()
 			{
 				if (_filter_body()) { printf("Chapter parsed\n"); _parse(); }
 			}
-			else for (unsigned int i = 0; i < chapter_numbers.size(); i++)
+			else for (size_t i = 0; i < chapter_numbers.size(); i++)
 			{
 				ir::print(page_name + page_name_len, "%u", chapter_numbers[i]);
 				if (_download_page(page_name) && _filter_body()) { printf("Chapter parsed\n"); _parse(); }
@@ -646,7 +646,7 @@ void mechan::DialogDownloader::download()
 		}
 		else
 		{
-			for (unsigned int i = 0; true; i++)
+			for (size_t i = 0; true; i++)
 			{
 				ir::print(page_name, "read.php?id=%u&chapter=%u", fanfic_number, i);
 				if (!_download_page(page_name)) break;

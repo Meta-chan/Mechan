@@ -1,153 +1,269 @@
 #define IR_INCLUDE 'i'
-#include "../header/mechan.h"
+#define MATHG_INCLUDE
+#define NEUROG_INCLUDE
+#include "../header/mechan_neuro.h"
 #include "../header/mechan_parse.h"
 #include "../header/mechan_character.h"
-#include <ir/print.h>
+#include <mathg/default.h>
 #include <time.h>
 #include <assert.h>
+#include <stdio.h>
 
-void mechan::Neuro::_unroll_char(char c, double v[33]) noexcept
+const float mechan::Neuro::train_part = 0.7f;
+const float mechan::Neuro::test_part = 0.3f;
+const float mechan::Neuro::coefficient = 1.0f;
+const float mechan::Neuro::deviance = 0.01f;
+
+void mechan::Neuro::_unroll_char(char c, float v[alphabet_size]) noexcept
 {
-	unsigned int nchar = is_cyrylic(c) ? ((unsigned char)c - (unsigned char)0xE0) : 32;
-	for (unsigned int i = 0; i < nchar; i++) v[i] = -1.0;
-	v[nchar] = 1.0;
-	for (unsigned int i = nchar + 1; i < 33; i++) v[i] = -1.0;
+	size_t nchar = is_cyrylic(c) ? ((unsigned char)c - (unsigned char)0xE0) : 32;
+	for (size_t i = 0; i < nchar; i++) v[i] = 0.0f;
+	v[nchar] = 1.0f;
+	for (size_t i = nchar + 1; i < alphabet_size; i++) v[i] = 0.0f;
 }
 
-void mechan::Neuro::_unroll_word(const std::string word, double v[33 * n_chars]) noexcept
+void mechan::Neuro::_unroll_word(const std::string word, float v[alphabet_size * n_chars]) noexcept
 {
 	if (word.size() > n_chars)
 	{
-		for (unsigned int i = 0; i < n_chars; i++)
-			_unroll_char(word[word.size() - n_chars + i], v + 33 * i);
+		for (size_t i = 0; i < n_chars; i++)
+			_unroll_char(word[word.size() - n_chars + i], v + alphabet_size * i);
 	}
 	else
 	{
-		for (unsigned int i = 0; i < n_chars - word.size(); i++)
-			_unroll_char(' ', v + 33 * i);
-		for (unsigned int i = 0; i < word.size(); i++)
-			_unroll_char(word[i], v + 33 * (n_chars - word.size() + i));
+		for (size_t i = 0; i < n_chars - word.size(); i++)
+			_unroll_char(' ', v + alphabet_size * i);
+		for (size_t i = 0; i < word.size(); i++)
+			_unroll_char(word[i], v + alphabet_size * (n_chars - word.size() + i));
 	}
 }
 
-void mechan::Neuro::_unroll_message(const Parsed *message, double v[message_size]) noexcept
+void mechan::Neuro::_unroll_message(const Parsed *message, float v[message_size]) noexcept
 {
 	if (message->words.size() > n_words)
 	{
-		for (unsigned int i = 0; i < n_words; i++)
-			_unroll_word(message->words[message->words.size() - n_words + i].lowercase, v + 33 * n_chars * i);
+		for (size_t i = 0; i < n_words; i++)
+			_unroll_word(message->words[message->words.size() - n_words + i].lowercase, v + alphabet_size * n_chars * i);
 	}
 	else
 	{
-		for (unsigned int i = 0; i < n_words - message->words.size(); i++)
-			_unroll_word("", v + 33 * n_chars * i);
-		for (unsigned int i = 0; i < message->words.size(); i++)
-			_unroll_word(message->words[i].lowercase, v + 33 * n_chars * (n_words - message->words.size() + i));
+		for (size_t i = 0; i < n_words - message->words.size(); i++)
+			_unroll_word("", v + alphabet_size * n_chars * i);
+		for (size_t i = 0; i < message->words.size(); i++)
+			_unroll_word(message->words[i].lowercase, v + alphabet_size * n_chars * (n_words - message->words.size() + i));
 	}
-	v[33 * n_words * n_chars] = (message->end == '.') ? 1.0 : -1.0;
-	v[33 * n_words * n_chars + 1] = (message->end == '!') ? 1.0 : -1.0;
-	v[33 * n_words * n_chars + 2] = (message->end == '?') ? 1.0 : -1.0;
+	v[alphabet_size * n_words * n_chars] = (message->end == '.') ? 1.0f : 0.0f;
+	v[alphabet_size * n_words * n_chars + 1] = (message->end == '!') ? 1.0f : 0.0f;
+	v[alphabet_size * n_words * n_chars + 2] = (message->end == '?') ? 1.0f : 0.0f;
 }
 
-mechan::Neuro::Neuro(Mechan *mechan) noexcept :
-	_mechan(mechan),
-	_distribution(0, mechan->dialog()->count() - 1)
+bool mechan::Neuro::_train() noexcept
 {
-	_generator.seed((unsigned int)time(nullptr));
-	_neuro = new ir::Neuro<double>(SS("data\\neuro"), nullptr);
-	if (!_neuro->ok())
+	if (_currect_message == 0)
 	{
-		delete _neuro;
-		unsigned int layers[4] = { 2 * message_size, 2000, 2000, 1 };
-		_neuro = new ir::Neuro<double>(4, layers, 0.01, nullptr);
+		printf("Training... ");
+		_currect_progress = 0;
 	}
-	if (_neuro->ok()) { _neuro->set_coefficient(0.01); _last_save = clock(); }
+
+	GLint sample = 0;
+	while (sample < batch_size && _currect_message < (unsigned int)(train_part * _dialog->count()))
+	{
+		//Picking message pair
+		unsigned int progress = (unsigned int)(100.0f * _currect_message / train_part / _dialog->count());
+		if (progress > _currect_progress)
+		{
+			printf("%u%% ", progress);
+			_currect_progress = progress;
+		}
+		_currect_message++;
+		std::string question, answer;
+		if (!_dialog->message(_currect_message - 1, &question)) continue;
+		if (!_dialog->message(_currect_message, &answer)) continue;
+
+		//Positive sample
+		Parsed parsed;
+		parse_punctuation(question, &parsed);
+		_unroll_message(&parsed, _input_buffer.data());
+		parse_punctuation(answer, &parsed);
+		_unroll_message(&parsed, _input_buffer.data() + message_size);
+		_neuro.input()->store_row(sample, _input_buffer.data());
+		_output_buffer[sample] = 1.0f;
+		sample++;
+
+		//Negative sample
+		unsigned int random;
+		std::string random_answer;
+		while (true)
+		{
+			random = _distribution(_generator);
+			if (_dialog->message(random, &random_answer)) break;
+		}
+		parse_punctuation(random_answer, &parsed);
+		_unroll_message(&parsed, _input_buffer.data() + message_size);
+		_neuro.input()->store_row(sample, _input_buffer.data());
+		_output_buffer[sample] = 0.0f;
+		sample++;
+	}
+	_neuro.goal()->store(_output_buffer.data());
+	_neuro.batch_size() = sample;
+	_neuro.forward();
+	_neuro.backward();
+	_neuro.correct();
+	if (_currect_message >= (unsigned int)(train_part * _dialog->count()))
+	{
+		printf("\n");
+	}
+	return true;
+}
+
+bool mechan::Neuro::_test() noexcept
+{
+	if (_currect_message == (unsigned int)(train_part * _dialog->count()))
+	{
+		printf("Testing... ");
+		_currect_progress = 0;
+		_test_count = 0;
+		_match_count = 0;
+	}
+
+	GLint sample = 0;
+	while (sample < batch_size && _currect_message < (unsigned int)((train_part + test_part) * _dialog->count()))
+	{
+		//Picking message pair
+		unsigned int progress = (unsigned int)(100.0f * (_currect_message - train_part * _dialog->count()) / test_part / _dialog->count());
+		if (progress > _currect_progress)
+		{
+			printf("%u%% ", progress);
+			_currect_progress = progress;
+		}
+		_currect_message++;
+		std::string question, answer;
+		if (!_dialog->message(_currect_message - 1, &question)) continue;
+		if (!_dialog->message(_currect_message, &answer)) continue;
+
+		//Positive sample
+		Parsed parsed;
+		parse_punctuation(question, &parsed);
+		_unroll_message(&parsed, _input_buffer.data());
+		parse_punctuation(answer, &parsed);
+		_unroll_message(&parsed, _input_buffer.data() + message_size);
+		_neuro.input()->store_row(sample, _input_buffer.data());
+		_test_count++;
+		sample++;
+
+		//Negative sample
+		unsigned int random;
+		std::string random_answer;
+		while (true)
+		{
+			random = _distribution(_generator);
+			if (_dialog->message(random, &random_answer)) break;
+		}
+		parse_punctuation(random_answer, &parsed);
+		_unroll_message(&parsed, _input_buffer.data() + message_size);
+		_neuro.input()->store_row(sample, _input_buffer.data());
+		_test_count++;
+		sample++;
+	}
+	_neuro.batch_size() = sample;
+	_neuro.forward();
+	_neuro.output()->load(_output_buffer.data());
+
+	size_t test_sample = 0;
+	while (test_sample < sample)
+	{
+		//Positive sample
+		if (_output_buffer[test_sample] >= 0.5f) _match_count++;
+		test_sample++;
+
+		//Negative sample
+		if (_output_buffer[test_sample] < 0.5f) _match_count++;
+		test_sample++;
+	}
+
+	if (_currect_message >= (unsigned int)((train_part + test_part) * _dialog->count()))
+	{
+		printf("%u from %u\n", _match_count, _test_count);
+		_currect_message = 0;
+	}
+	return true;
+}
+
+mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
+	_dialog(dialog),
+	_word(word),
+	_distribution(0, dialog->count() - 1)
+{
+	if (!_input_buffer.resize(2 * message_size)) return;
+	if (!_output_buffer.resize(batch_size)) return;
+	if (!mathg::Default::init()) return;
+	if (!mathg::MathG::init()) return;
+	neurog::FullLayer::Info layer1(2 * message_size, 2000, deviance);
+	neurog::FullLayer::Info layer2(2000, 500, deviance);
+	neurog::FullLayer::Info layer3(500, 1, deviance);
+	neurog::Layer::Info *layers[] = { &layer1, &layer2, &layer3 };
+	if (_neuro.init("data/neuro", batch_size, train)) printf("Neuronal network found\n");
+	else if (_neuro.init(3, layers, batch_size, train)) printf("Neuronal network created\n");
+	else return;
+	set_coefficient(coefficient);
+	_generator.seed((unsigned int)time(nullptr));
+	_last_save = clock();
 }
 
 bool mechan::Neuro::ok() const noexcept
 {
-	return _neuro != nullptr && _neuro->ok();
+	return _neuro.ok();
 }
 
-double mechan::Neuro::get_coefficient() const noexcept
+float mechan::Neuro::get_coefficient() const noexcept
 {
-	return _neuro->get_coefficient();
+	return _neuro.coefficients(0);
 }
 
-void mechan::Neuro::set_coefficient(double coefficient) noexcept
+void mechan::Neuro::set_coefficient(float coefficient) noexcept
 {
-	_neuro->set_coefficient(coefficient);
+	for (size_t i = 0; i < 3; i++) _neuro.coefficients(i) = coefficient;
 }
 
-void mechan::Neuro::save() noexcept
+bool mechan::Neuro::save() noexcept
 {
-	_neuro->save(SS("data\\neuro"));
+	if (!_neuro.save("data/neuro")) return false;
 	_last_save = clock();
+	return true;
 }
 
-void mechan::Neuro::train() noexcept
+bool mechan::Neuro::train() noexcept
 {
-	//unrolling message
-	unsigned int nmessage = _distribution(_generator);
-	std::string question, answer;
-	if (!_mechan->dialog()->message(nmessage, &question)) return;
-	if (!_mechan->dialog()->message(nmessage + 1, &answer)) return;
-
-	Parsed parsed;
-	parse_punctuation(question, &parsed);
-	_unroll_message(&parsed, _neuro->get_input()->data(0));
-
-	if ((_distribution(_generator) % (1 + negative_pro_positive)) == 0)
+	if (_currect_message < (unsigned int)(train_part * _dialog->count()))
 	{
-		//positive training
-		parse_punctuation(answer, &parsed);
-		_unroll_message(&parsed, _neuro->get_input()->data(0) + message_size);
-		_neuro->forward();
-		_neuro->get_goal()->at(0, 0) = 1.0;
-		_neuro->backward();
-
-		char message[512];
-		ir::print(message, 512, "Positive training: %lf", _neuro->get_output()->at(0, 0));
-		_mechan->print_event_log(message);
-	}
-	else while (true)
-	{
-		//negative training
-		nmessage = _distribution(_generator);
-		std::string random;
-		if (_mechan->dialog()->message(nmessage, &random))
+		if (!_train()) return false;
+		if (clock() - _last_save > interval * CLOCKS_PER_SEC)
 		{
-			parse_punctuation(random, &parsed);
-			_unroll_message(&parsed, _neuro->get_input()->data(0) + message_size);
-			_neuro->forward();
-			_neuro->get_goal()->at(0, 0) = -1.0;
-			_neuro->backward();
-
-			char message[512];
-			ir::print(message, 512, "Negative training: %lf", _neuro->get_output()->at(0, 0));
-			_mechan->print_event_log(message);
-			break;
+			_neuro.save("data/neuro");
+			_last_save = clock();
 		}
 	}
-
-	//saving
-	if (clock() - _last_save > 3600 * CLOCKS_PER_SEC)
-	{
-		_neuro->save(SS("data\\neuro"));
-		_last_save = clock();
-	}
+	else return _test();
+	return true;
 }
 
-double mechan::Neuro::qestion_answer(const Parsed *question, const Parsed *answer) noexcept
+bool mechan::Neuro::store_messages(GLint sample, const Parsed *question, const Parsed *answer) noexcept
 {
-	_unroll_message(question, _neuro->get_input()->data(0));
-	_unroll_message(answer, _neuro->get_input()->data(0) + message_size);
-	_neuro->forward();
-	return _neuro->get_output()->at(0, 0);
+	if (question != nullptr) _unroll_message(question, _input_buffer.data());
+	if (answer != nullptr) _unroll_message(answer, _input_buffer.data() + message_size);
+	return _neuro.input()->store_row(sample, _input_buffer.data());
+}
+
+bool mechan::Neuro::load_heuristics(GLint batch_size, float ** const data) noexcept
+{
+	_neuro.batch_size() = batch_size;
+	return _neuro.forward() && _neuro.output()->load(data);
 }
 
 mechan::Neuro::~Neuro() noexcept
 {
-	if (_neuro != nullptr && _neuro->ok()) _neuro->save(SS("data\\neuro"));
-	delete _neuro;
+	if (_neuro.ok()) _neuro.save("data/neuro");
+	_neuro.finalize();
+	mathg::MathG::finalize();
+	mathg::Default::finalize();
 }

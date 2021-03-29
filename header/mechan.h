@@ -13,7 +13,7 @@ namespace mechan
 	{
 	private:
 		TCPAddress _event_log_address;
-		unsigned int _event_log_messages = 0;
+		size_t _event_log_messages = 0;
 
 		TCPServer _server;
 		Dialog _dialog;
@@ -23,9 +23,6 @@ namespace mechan
 
 	public:
 		Mechan()										noexcept;
-		Dialog *dialog()								noexcept;
-		Word *word()									noexcept;
-		Neuro *neuro()									noexcept;
 		void print_event_log(const std::string string)	noexcept;
 		int main()										noexcept;
 	};

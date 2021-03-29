@@ -1,29 +1,14 @@
 #define IR_INCLUDE 'i'
+#include <ir/print.h>
 #include "../header/mechan.h"
 #include "../header/mechan_parse.h"
-#include <ir/print.h>
 
 mechan::Mechan::Mechan() noexcept :
-	_dialog(this),
-	_word(this),
-	_neuro(this),
-	_core(this)
+	_dialog(),
+	_word(&_dialog),
+	_neuro(&_dialog, &_word, false),
+	_core(&_dialog, &_word)
 {
-}
-
-mechan::Dialog *mechan::Mechan::dialog() noexcept
-{
-	return &_dialog;
-}
-
-mechan::Word *mechan::Mechan::word() noexcept
-{
-	return &_word;
-}
-
-mechan::Neuro *mechan::Mechan::neuro() noexcept
-{
-	return &_neuro;
 }
 
 void mechan::Mechan::print_event_log(const std::string string) noexcept
@@ -70,7 +55,7 @@ int mechan::Mechan::main() noexcept
 					&& parsed[0] == "coefficient"
 					&& strtod(parsed[1].data(), nullptr) > 0)
 				{
-					_neuro.set_coefficient(strtod(parsed[1].data(), nullptr));
+					_neuro.set_coefficient(strtof(parsed[1].data(), nullptr));
 					_server.send(address, "!");
 				}
 				// ?coefficient

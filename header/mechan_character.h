@@ -13,10 +13,10 @@ namespace mechan
 	static const char quoteopen = (char)0xAB;
 	static const char quoteclose = (char)0xBB;
 
-	bool is_latin(char c) noexcept;
-	bool is_cyrylic(char c) noexcept;
-	bool is_uppercase(char c) noexcept;
-	bool is_alphanumeric(char c) noexcept;
-	char lowercase(char c) noexcept;
-	std::string lowercase(const std::string string) noexcept;
+	bool is_latin(char c)							noexcept;
+	bool is_cyrylic(char c)							noexcept;
+	bool is_uppercase(char c)						noexcept;
+	bool is_alphanumeric(char c)					noexcept;
+	char lowercase(char c)							noexcept;
+	std::string lowercase(const std::string string)	noexcept;
 }

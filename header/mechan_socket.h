@@ -29,8 +29,8 @@ namespace mechan
 	public:
 		TCPServer() noexcept;
 		bool ok() const noexcept;
-		bool send(TCPAddress address, const std::string message) noexcept;
-		bool receive(TCPAddress *address, std::string *message) noexcept;
+		bool send(TCPAddress address, const std::string message)noexcept;
+		bool receive(TCPAddress *address, std::string *message)	noexcept;
 	};
 
 	class TCPClient : ir::TCPClient
@@ -39,9 +39,9 @@ namespace mechan
 		std::vector<char> _buffer;
 
 	public:
-		TCPClient() noexcept;
-		bool ok() const noexcept; 
-		bool send(TCPAddress address, const std::string message) noexcept;
-		bool receive(TCPAddress *address, std::string *message) noexcept;
+		TCPClient()												noexcept;
+		bool ok()												const noexcept; 
+		bool send(TCPAddress address, const std::string message)noexcept;
+		bool receive(TCPAddress *address, std::string *message)	noexcept;
 	};
 }

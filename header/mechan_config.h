@@ -10,10 +10,10 @@ namespace mechan
 	private:
 		static bool _initialized;
 		static std::map<std::string, std::string> _config;
-		static void _initialize() noexcept;
+		static void _initialize()						noexcept;
 		
 	public:
-		static bool defined(const std::string name)			noexcept;
-		static std::string value(const std::string name)	noexcept;
+		static bool defined(const std::string name)		noexcept;
+		static std::string value(const std::string name)noexcept;
 	};
 }

@@ -9,6 +9,7 @@
 
 template class ir::Neuro<double, 1>;
 template class ir::Resource<void*>;
+template class ir::QuietVector<float>;
 template size_t ir::Encoding::recode<ir::Encoding::UTF8, ir::Encoding::UTF16>(
 	ir::Encoding::UTF16::Char*,
 	const ir::Encoding::UTF8::Char*,

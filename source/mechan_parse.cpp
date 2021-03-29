@@ -7,7 +7,7 @@ void mechan::parse_punctuation(const std::string string, Parsed *parsed) noexcep
 	parsed->words.resize(0);
 	parsed->end = string.empty() ? '\0' : string.back();
 	bool request_new = true;
-	for (unsigned int i = 0; i < string.size(); i++)
+	for (size_t i = 0; i < string.size(); i++)
 	{
 		if((string[i] >= '0' && string[i] <= '9')
 		|| (string[i] >= 'A' && string[i] <= 'z')
@@ -36,7 +36,7 @@ void mechan::parse_space(const std::string string, std::vector<std::string> *wor
 {
 	words->resize(0);
 	bool request_new = true;
-	for (unsigned int i = 0; i < string.size(); i++)
+	for (size_t i = 0; i < string.size(); i++)
 	{
 		if (string[i] == ' ' || string[i] == ',')
 		{

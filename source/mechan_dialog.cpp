@@ -1,23 +1,21 @@
 #define IR_INCLUDE 'i'
-#include "../header/mechan.h"
+#include "../header/mechan_dialog.h"
 #include <assert.h>
 #include <ir/file.h>
-#include <ir/print.h>
 
 bool mechan::Dialog::_parse() noexcept
 {
 	//Open text file
-	ir::File dialog(SS("data\\dialog.txt"), SS("r"));
+	ir::File dialog(SS("data/dialog.txt"), SS("r"));
 	if (!dialog.ok()) return false;
-	_mechan->print_event_log("Dialog file found");
+	printf("Dialog file found\n");
 	ir::uint64 dialog_size = dialog.size();
 
 	//Open database
-	_dialog = new ir::N2STDatabase(SS("data\\dialog"), ir::Database::create_mode::neww, nullptr);
-	if (!_dialog->ok() || _dialog->set_ram_mode(true, true) != ir::ec::ok)
+	if (_dialog.init(SS("data/dialog"), ir::Database::create_mode::neww) != ir::ec::ok
+	|| _dialog.set_ram_mode(true, true) != ir::ec::ok)
 	{
-		delete _dialog;
-		_dialog = nullptr;
+		_dialog.finalize();
 		return false;
 	}
 	
@@ -39,7 +37,7 @@ bool mechan::Dialog::_parse() noexcept
 			if (!buffer.empty())
 			{
 				ir::Block data(buffer.c_str(), buffer.size());
-				_dialog->insert(index, data);
+				_dialog.insert(index, data);
 				buffer.resize(0);
 			}
 			index++;
@@ -52,67 +50,59 @@ bool mechan::Dialog::_parse() noexcept
 		if ((unsigned int)(100.0 * dialog.tell() / dialog_size) > reported)
 		{
 			reported = (unsigned int)(100.0 * dialog.tell() / dialog_size);
-			char buffer[64];
-			ir::print(buffer, "Dialog file parsing %u", reported);
-			_mechan->print_event_log(buffer);
+			printf("Dialog file parsing %u", reported);
 		}
 	}
 
-	delete _dialog;
-	_dialog = nullptr;
+	_dialog.finalize();
 	return true;
 }
 
-mechan::Dialog::Dialog(Mechan *mechan) noexcept : _mechan(mechan)
+mechan::Dialog::Dialog() noexcept
 {
 	//First try
-	_dialog = new ir::N2STDatabase(SS("data\\dialog"), ir::Database::create_mode::read, nullptr);
-	if (_dialog->ok() && _dialog->set_ram_mode(true, true) == ir::ec::ok)
+	if (_dialog.init(SS("data/dialog"), ir::Database::create_mode::read) == ir::ec::ok
+	&& _dialog.set_ram_mode(true, true) == ir::ec::ok)
 	{
-		_mechan->print_event_log("Dialog database found");
+		printf("Dialog database found\n");
 		return;
 	}
 	
 	//Second try
 	if (_parse())
 	{
-		_dialog = new ir::N2STDatabase(SS("data\\dialog"), ir::Database::create_mode::read, nullptr);
-		if (_dialog->ok() && _dialog->set_ram_mode(true, true) == ir::ec::ok)
+		if (_dialog.init(SS("data/dialog"), ir::Database::create_mode::read) == ir::ec::ok
+		&& _dialog.set_ram_mode(true, true) == ir::ec::ok)
 		{
-			_mechan->print_event_log("Dialog database found");
+			printf("Dialog database found\n");
 		}
 	}
 }
 
 bool mechan::Dialog::ok() const noexcept
 {
-	return _dialog != nullptr && _dialog->ok();
+	return _dialog.ok();
 }
 
-bool mechan::Dialog::message(unsigned int i, std::string *s) const noexcept
+bool mechan::Dialog::message(unsigned int i, std::string *s) noexcept
 {
 	assert(ok());
 	if (s != nullptr)
 	{
 		ir::Block data;
-		if (_dialog->read(i, &data) != ir::ec::ok) return false;
+		if (_dialog.read(i, &data) != ir::ec::ok) return false;
 		s->resize(data.size());
 		memcpy(&s->at(0), data.data(), data.size());
 		return true;
 	}
 	else
 	{
-		return _dialog->probe(i) == ir::ec::ok;
+		return _dialog.probe(i) == ir::ec::ok;
 	}
 }
 
 unsigned int mechan::Dialog::count() const noexcept
 {
 	assert(ok());
-	return (_dialog->get_table_size());
-}
-
-mechan::Dialog::~Dialog() noexcept
-{
-	if (_dialog != nullptr) delete _dialog;
+	return (_dialog.get_table_size());
 }

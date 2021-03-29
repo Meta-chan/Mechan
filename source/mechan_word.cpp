@@ -1,8 +1,7 @@
 #define IR_INCLUDE 'i'
-#include "../header/mechan.h"
+#include "../header/mechan_word.h"
 #include "../header/mechan_character.h"
 #include "../header/mechan_parse.h"
-#include <ir/print.h>
 #include <ir/file.h>
 #include <assert.h>
 
@@ -58,15 +57,17 @@ const unsigned int *mechan::Word::WordInfo::synonym_groups() const noexcept
 
 bool mechan::Word::_load() noexcept
 {
-	_words = new ir::S2STDatabase(SS("data\\words"), ir::Database::create_mode::read, nullptr);
-	if (!_words->ok() || _words->set_ram_mode(true, true) != ir::ec::ok)
+	if (_words.init(SS("data/words"), ir::Database::create_mode::read) == ir::ec::ok
+	|| _words.set_ram_mode(true, true) == ir::ec::ok)
 	{
-		delete _words;
-		_words = nullptr;
+		printf("Word database found\n");
+		return true;
+	}
+	else
+	{
+		_words.finalize();
 		return false;
 	}
-
-	return true;
 }
 
 bool mechan::Word::_parse_dialog() noexcept
@@ -75,23 +76,21 @@ bool mechan::Word::_parse_dialog() noexcept
 	Parsed parsed;
 	unsigned int reported = 0;
 	
-	for (unsigned int index = 0; index < _mechan->dialog()->count(); index++)
+	for (unsigned int index = 0; index < _dialog->count(); index++)
 	{
 		//Report success
-		if ((unsigned int)(100.0 * index / _mechan->dialog()->count()) > reported)
+		if ((unsigned int)(100.0 * index / _dialog->count()) > reported)
 		{
-			reported = (unsigned int)(100.0 * index / _mechan->dialog()->count());
-			char buffer[64];
-			ir::print(buffer, 64, "Dialog words counting %u", reported);
-			_mechan->print_event_log(buffer);
+			reported = (unsigned int)(100.0 * index / _dialog->count());
+			printf("Dialog words counting %u", reported);
 		}
 
 		//Parse message
-		if (!_mechan->dialog()->message(index, &message)) continue;
+		if (!_dialog->message(index, &message)) continue;
 		parse_punctuation(message, &parsed);
 		
 		//Encount each word in message
-		for (unsigned int j = 0; j < parsed.words.size(); j++)
+		for (size_t j = 0; j < parsed.words.size(); j++)
 		{
 			if (parsed.words[j].uppercase)
 				_unpacked_words[parsed.words[j].lowercase].uppercase_occurence_number++;
@@ -126,8 +125,8 @@ bool mechan::Word::_parse_morphology() noexcept
 	};
 	
 	//Open file
-	ir::File morphology(SS("data\\morphology.txt"), SS("r"));
-	_mechan->print_event_log("Morphology file found");
+	ir::File morphology(SS("data/morphology.txt"), SS("r"));
+	printf("Morphology file found\n");
 	if (!morphology.ok()) return false;
 	ir::uint64 morphology_size = morphology.size();
 	
@@ -138,8 +137,8 @@ bool mechan::Word::_parse_morphology() noexcept
 	std::vector<std::string> text_characteristics;
 	MorphologyCharacteristics characteristics;
 	unsigned int group = 0;
-	unsigned int reported = 0;
 	unsigned int position = 0;
+	unsigned int reported = 0;
 
 	//Parse
 	while (true)
@@ -244,7 +243,7 @@ bool mechan::Word::_parse_morphology() noexcept
 			else if (c == ' ' || c == '|')
 			{
 				bool found = false;
-				for (unsigned int i = 0; i < text_characteristics.size(); i++)
+				for (size_t i = 0; i < text_characteristics.size(); i++)
 				{
 					if (text_characteristic == text_characteristics[i])
 						{ characteristics.set((MorphologyCharacteristic)i, true); found = true; break; }
@@ -283,9 +282,7 @@ bool mechan::Word::_parse_morphology() noexcept
 		if ((unsigned int)(100.0 * position / morphology_size) > reported)
 		{
 			reported = (unsigned int)(100.0 * position / morphology_size);
-			char buffer[64];
-			ir::print(buffer, 64, "Morphology file parsing %u", reported);
-			_mechan->print_event_log(buffer);
+			printf("Morphology file parsing %u\n", reported);
 		}
 	}
 	return true;
@@ -322,17 +319,17 @@ bool mechan::Word::_parse_synonym() noexcept
 	};
 	
 	//Open file
-	ir::File synonym(SS("data\\synonym.txt"), SS("r"));
+	ir::File synonym(SS("data/synonym.txt"), SS("r"));
 	if (!synonym.ok()) return false;
-	_mechan->print_event_log("Synonym file found");
+	printf("Synonym file found\n");
 	ir::uint64 synonym_size = synonym.size();
 
 	//Init variables
 	State  state = State::delimiter_wait_word;
 	std::string lowercase_word;
 	unsigned int group = 0;
-	unsigned int reported = 0;
 	unsigned int position = 0;
+	unsigned int reported = 0;
 
 	//Parse
 	while (true)
@@ -438,9 +435,7 @@ bool mechan::Word::_parse_synonym() noexcept
 		if ((unsigned int)(100.0 * position / synonym_size) > reported)
 		{
 			reported = (unsigned int)(100.0 * position / synonym_size);
-			char buffer[64];
-			ir::print(buffer, 64, "Synonym file parsing %u", reported);
-			_mechan->print_event_log(buffer);
+			printf("Synonym file parsing %u\n", reported);
 		}
 	}
 	return true;
@@ -461,24 +456,23 @@ unsigned int mechan::Word::_pack_morphology_group_occurencies(unsigned int group
 
 bool mechan::Word::_pack() noexcept
 {
-	_words = new ir::S2STDatabase(SS("data\\words"), ir::Database::create_mode::neww, nullptr);
-	if (!_words->ok() || _words->set_ram_mode(true, true) != ir::ec::ok)
+	if (_words.init(SS("data/words"), ir::Database::create_mode::neww) != ir::ec::ok
+	|| _words.set_ram_mode(true, true) != ir::ec::ok)
 	{
-		delete _words;
-		_words = nullptr;
+		_words.finalize();
 		return false;
 	}
 
 	for (auto i = _unpacked_words.cbegin(); i != _unpacked_words.cend(); i++)
 	{
 		//Find group/characteristics with most occurencies
-		unsigned int max_occurencies = 0;
+		size_t max_occurencies = 0;
 		MorphologyCharacteristics max_characteristics;
 		for (auto j = i->second.morphology_characteristics.cbegin();
 			j != i->second.morphology_characteristics.cend();
 			j++)
 		{
-			unsigned int new_occurencies = _pack_morphology_group_occurencies(j->first);
+			size_t new_occurencies = _pack_morphology_group_occurencies(j->first);
 			if (new_occurencies > max_occurencies)
 			{
 				max_occurencies = new_occurencies;
@@ -488,15 +482,15 @@ bool mechan::Word::_pack() noexcept
 
 		//Add to database
 		const std::string lowercase_word = i->first;
-		unsigned int morphology_group_number = (unsigned int)i->second.morphology_characteristics.size();
-		unsigned int synonym_group_number = (unsigned int)i->second.synonym_groups.size();
-		_buffer.resize(sizeof(WordInfo) + (morphology_group_number + synonym_group_number) * sizeof(unsigned int));
+		unsigned int morphology_group_number = (unsigned int) i->second.morphology_characteristics.size();
+		unsigned int synonym_group_number = (unsigned int) i->second.synonym_groups.size();
+		_buffer.resize(sizeof(WordInfo) + (morphology_group_number + synonym_group_number) * sizeof(size_t));
 		WordInfo *word_info = (WordInfo*)&_buffer[0];
 		word_info->lowercase_occurence_number = i->second.lowercase_occurence_number;
 		word_info->uppercase_occurence_number = i->second.uppercase_occurence_number;
 		word_info->morphology_group_number = morphology_group_number;
 		word_info->probable_characteristics = max_characteristics;
-		unsigned int k = 0;
+		size_t k = 0;
 		for (auto j = i->second.morphology_characteristics.cbegin(); j != i->second.morphology_characteristics.cend(); j++, k++)
 			word_info->morphology_groups()[k] = j->first;
 		k = 0;
@@ -504,27 +498,24 @@ bool mechan::Word::_pack() noexcept
 			word_info->morphology_groups()[k] = *j;
 		ir::Block key(lowercase_word.data(), lowercase_word.size());
 		ir::Block data(_buffer.data(), _buffer.size());
-		if (_words->insert(key, data) != ir::ec::ok)
+		if (_words.insert(key, data) != ir::ec::ok)
 		{
-			delete _words;
-			_words = nullptr;
+			_words.finalize();
 			return false;
 		}
 	}
 
-	delete _words;
-	_words = new ir::S2STDatabase(SS("data\\words"), ir::Database::create_mode::read, nullptr);
-	if (!_words->ok() || _words->set_ram_mode(true, true) != ir::ec::ok)
+	if (_words.init(SS("data/words"), ir::Database::create_mode::read) != ir::ec::ok
+	|| _words.set_ram_mode(true, true) != ir::ec::ok)
 	{
-		delete _words;
-		_words = nullptr;
+		_words.finalize();
 		return false;
 	}
 
 	return true;
 }
 
-mechan::Word::Word(Mechan *mechan) noexcept : _mechan(mechan)
+mechan::Word::Word(Dialog *dialog) noexcept : _dialog(dialog)
 {
 	if (!_load())
 	{
@@ -536,21 +527,16 @@ mechan::Word::Word(Mechan *mechan) noexcept : _mechan(mechan)
 
 bool mechan::Word::ok() const noexcept
 {
-	return _words != nullptr && _words->ok();
+	return _words.ok();
 }
 
-bool mechan::Word::word_info(std::string lowercase_word, const WordInfo **info, unsigned int *info_size) const noexcept
+bool mechan::Word::word_info(std::string lowercase_word, const WordInfo **info, unsigned int *info_size) noexcept
 {
 	assert(ok());
 	ir::Block key(lowercase_word.data(), lowercase_word.size());
 	ir::Block data;
-	if (_words->read(key, &data) != ir::ec::ok) return false;
+	if (_words.read(key, &data) != ir::ec::ok) return false;
 	*info_size = (unsigned int)data.size();
 	*info = (WordInfo*)data.data();
 	return true;
-}
-
-mechan::Word::~Word() noexcept
-{
-	if (_words != nullptr) delete _words;
 }

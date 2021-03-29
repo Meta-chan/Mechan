@@ -17,6 +17,6 @@ namespace mechan
 		char end;
 	};
 
-	void parse_punctuation(const std::string string, Parsed *parsed) noexcept;
-	void parse_space(const std::string string, std::vector<std::string> *words) noexcept;
+	void parse_punctuation(const std::string string, Parsed *parsed)			noexcept;
+	void parse_space(const std::string string, std::vector<std::string> *words)	noexcept;
 }

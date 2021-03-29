@@ -10,15 +10,13 @@ namespace mechan
 	class Dialog
 	{
 	private:
-		Mechan *_mechan						= nullptr;
-		ir::N2STDatabase *_dialog			= nullptr;
-		bool _parse() noexcept;
+		ir::N2STDatabase _dialog;
+		bool _parse()								noexcept;
 
 	public:
-		Dialog(Mechan *mechan)				noexcept;
-		bool ok()							const noexcept;
-		bool message(unsigned int i, std::string *s)	const noexcept;
-		unsigned int count()				const noexcept;
-		~Dialog()							noexcept;
+		Dialog()									noexcept;
+		bool ok()									const noexcept;
+		bool message(unsigned int i, std::string *s)noexcept;
+		unsigned int count()						const noexcept;
 	};
 }

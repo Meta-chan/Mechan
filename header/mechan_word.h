@@ -1,5 +1,6 @@
 #pragma once
 
+#include "mechan_dialog.h"
 #include <ir/s2st_database.h>
 #include <ir/n2st_database.h>
 #include <map>
@@ -9,8 +10,6 @@
 
 namespace mechan
 {
-	class Mechan;
-
 	class Word
 	{
 	public:
@@ -129,8 +128,8 @@ namespace mechan
 			unsigned int _a = 0, _b = 0, _c = 0;
 
 		public:
-			bool get(MorphologyCharacteristic c)										const noexcept;
-			void set(MorphologyCharacteristic c, bool v)								noexcept;
+			bool get(MorphologyCharacteristic c)			const noexcept;
+			void set(MorphologyCharacteristic c, bool v)	noexcept;
 		};
 
 		struct WordInfo
@@ -139,11 +138,11 @@ namespace mechan
 			unsigned int uppercase_occurence_number;
 			MorphologyCharacteristics probable_characteristics;
 			unsigned int morphology_group_number;
-			unsigned int *morphology_groups()						noexcept;		//sorted
-			const unsigned int *morphology_groups()					const noexcept;	//sorted
-			unsigned int synonym_group_number(unsigned int size)	const noexcept;
-			unsigned int *synonym_groups()							noexcept;		//sorted
-			const unsigned int *synonym_groups()					const noexcept;	//sorted
+			unsigned int *morphology_groups()					noexcept;		//sorted
+			const unsigned int *morphology_groups()				const noexcept;	//sorted
+			unsigned int synonym_group_number(unsigned int size)const noexcept;
+			unsigned int *synonym_groups()						noexcept;		//sorted
+			const unsigned int *synonym_groups()				const noexcept;	//sorted
 		};
 
 	private:
@@ -161,8 +160,8 @@ namespace mechan
 			std::set<std::string> lowercase_words;	//not sorted
 		};
 
-		Mechan *_mechan							= nullptr;
-		ir::S2STDatabase *_words				= nullptr;
+		mechan::Dialog *_dialog					= nullptr;
+		ir::S2STDatabase _words;
 		std::map<std::string, UnpackedWordInfo> _unpacked_words;
 		std::vector<UnpackedMorphologyGroupInfo> _unpacked_morphology_groups;
 		std::vector<char> _buffer;
@@ -182,9 +181,8 @@ namespace mechan
 		bool _pack()				noexcept;
 
 	public:
-		Word(Mechan *mechan)		noexcept;
+		Word(Dialog *dialog)		noexcept;
 		bool ok()					const noexcept;
-		bool word_info(std::string lowercase_word, const WordInfo **info, unsigned int *info_size) const noexcept;
-		~Word()						noexcept;
+		bool word_info(std::string lowercase_word, const WordInfo **info, unsigned int *info_size) noexcept;
 	};
 }
