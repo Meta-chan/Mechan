@@ -11,7 +11,7 @@
 
 const float mechan::Neuro::train_part = 0.7f;
 const float mechan::Neuro::test_part = 0.3f;
-const float mechan::Neuro::coefficient = 1.0f;
+const float mechan::Neuro::coefficient = 0.001f;
 const float mechan::Neuro::deviance = 0.01f;
 
 void mechan::Neuro::_unroll_char(char c, float v[alphabet_size]) noexcept
@@ -59,20 +59,22 @@ void mechan::Neuro::_unroll_message(const Parsed *message, float v[message_size]
 
 bool mechan::Neuro::_train() noexcept
 {
-	if (_currect_message == 0)
+	if (_state == State::begin_training)
 	{
-		printf("Training... ");
+		printf("Training...\n");
+		_currect_message = 0;
 		_currect_progress = 0;
+		_state = State::training;
 	}
 
 	GLint sample = 0;
 	while (sample < batch_size && _currect_message < (unsigned int)(train_part * _dialog->count()))
 	{
 		//Picking message pair
-		unsigned int progress = (unsigned int)(100.0f * _currect_message / train_part / _dialog->count());
+		unsigned int progress = (unsigned int)(10.0f * _currect_message / train_part / _dialog->count());
 		if (progress > _currect_progress)
 		{
-			printf("%u%% ", progress);
+			printf("%u0%% ", progress);
 			_currect_progress = progress;
 		}
 		_currect_message++;
@@ -109,31 +111,43 @@ bool mechan::Neuro::_train() noexcept
 	_neuro.forward();
 	_neuro.backward();
 	_neuro.correct();
+
 	if (_currect_message >= (unsigned int)(train_part * _dialog->count()))
 	{
-		printf("\n");
+		printf("\n");	
+		_state = State::begin_testing;
 	}
 	return true;
 }
 
 bool mechan::Neuro::_test() noexcept
 {
-	if (_currect_message == (unsigned int)(train_part * _dialog->count()))
+	if (_state == State::begin_testing)
 	{
-		printf("Testing... ");
+		printf("Testing...\n");
+		_currect_message = 0;
 		_currect_progress = 0;
-		_test_count = 0;
-		_match_count = 0;
+		_train_pair_count = 0;
+		_train_cost_count = 0.0f;
+		_train_guess_count = 0;
+		_test_pair_count = 0;
+		_test_cost_count = 0.0f;
+		_test_guess_count = 0;
+		_state = State::train_testing;
 	}
 
+	unsigned int last_message;
+	if ( _state == State::train_testing) last_message = (unsigned int)(train_part * _dialog->count());
+	else last_message = (unsigned int)((train_part + test_part) * _dialog->count());
+	
 	GLint sample = 0;
-	while (sample < batch_size && _currect_message < (unsigned int)((train_part + test_part) * _dialog->count()))
+	while (sample < batch_size && _currect_message < last_message)
 	{
 		//Picking message pair
-		unsigned int progress = (unsigned int)(100.0f * (_currect_message - train_part * _dialog->count()) / test_part / _dialog->count());
+		unsigned int progress = (unsigned int)(10.0f * _currect_message / (train_part + test_part) / _dialog->count());
 		if (progress > _currect_progress)
 		{
-			printf("%u%% ", progress);
+			printf("%u0%% ", progress);
 			_currect_progress = progress;
 		}
 		_currect_message++;
@@ -148,7 +162,6 @@ bool mechan::Neuro::_test() noexcept
 		parse_punctuation(answer, &parsed);
 		_unroll_message(&parsed, _input_buffer.data() + message_size);
 		_neuro.input()->store_row(sample, _input_buffer.data());
-		_test_count++;
 		sample++;
 
 		//Negative sample
@@ -162,29 +175,50 @@ bool mechan::Neuro::_test() noexcept
 		parse_punctuation(random_answer, &parsed);
 		_unroll_message(&parsed, _input_buffer.data() + message_size);
 		_neuro.input()->store_row(sample, _input_buffer.data());
-		_test_count++;
 		sample++;
 	}
 	_neuro.batch_size() = sample;
 	_neuro.forward();
 	_neuro.output()->load(_output_buffer.data());
 
-	size_t test_sample = 0;
-	while (test_sample < sample)
+	size_t back_sample = 0;
+	while (back_sample < sample)
 	{
-		//Positive sample
-		if (_output_buffer[test_sample] >= 0.5f) _match_count++;
-		test_sample++;
-
-		//Negative sample
-		if (_output_buffer[test_sample] < 0.5f) _match_count++;
-		test_sample++;
+		//Couning statistics
+		float cost = (_output_buffer[back_sample] - 1.0f) * (_output_buffer[back_sample] - 1.0f);
+		cost += ((_output_buffer[back_sample + 1] - 0.0f) * (_output_buffer[back_sample + 1] - 0.0f));
+		if (_state == State::train_testing)
+		{
+			_train_pair_count++;
+			if (_output_buffer[back_sample] > _output_buffer[back_sample + 1]) _train_guess_count++;
+			_train_cost_count += cost;
+		}
+		else
+		{
+			_test_pair_count++;
+			if (_output_buffer[back_sample] > _output_buffer[back_sample + 1]) _test_guess_count++;
+			_test_cost_count += cost;
+		}
+		back_sample += 2;
 	}
 
-	if (_currect_message >= (unsigned int)((train_part + test_part) * _dialog->count()))
+	if (_state == State::train_testing && _currect_message >= (unsigned int)(train_part * _dialog->count()))
 	{
-		printf("%u from %u\n", _match_count, _test_count);
-		_currect_message = 0;
+		_state = State::test_testing;
+	}
+	else if (_state == State::test_testing && _currect_message >= (unsigned int)((train_part + test_part) * _dialog->count()))
+	{
+		printf("\n");
+		printf("Train samples: %u\n", 2 * _train_pair_count);
+		printf("Train pairs:   %u\n", _train_pair_count);
+		printf("Avarage cost:  %f\n", _train_cost_count / (2 * _train_pair_count));
+		printf("Guess rate:    %f%%\n", 100.f * _train_guess_count / _train_pair_count);
+		printf("Train samples: %u\n", 2 * _test_pair_count);
+		printf("Train pairs:   %u\n", _test_pair_count);
+		printf("Avarage cost:  %f\n", _test_cost_count / (2 * _test_pair_count));
+		printf("Guess rate:    %f%%\n", 100.f * _test_guess_count / _test_pair_count);
+		printf("\n");
+		_state = State::begin_training;
 	}
 	return true;
 }
@@ -198,16 +232,16 @@ mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
 	if (!_output_buffer.resize(batch_size)) return;
 	if (!mathg::Default::init()) return;
 	if (!mathg::MathG::init()) return;
-	neurog::FullLayer::Info layer1(2 * message_size, 2000, deviance);
-	neurog::FullLayer::Info layer2(2000, 500, deviance);
-	neurog::FullLayer::Info layer3(500, 1, deviance);
-	neurog::Layer::Info *layers[] = { &layer1, &layer2, &layer3 };
+	neurog::FullLayer::Info layer1(2 * message_size, 500, deviance);
+	neurog::FullLayer::Info layer2(500, 1, deviance);
+	neurog::Layer::Info *layers[] = { &layer1, &layer2 };
 	if (_neuro.init("data/neuro", batch_size, train)) printf("Neuronal network found\n");
-	else if (_neuro.init(3, layers, batch_size, train)) printf("Neuronal network created\n");
+	else if (_neuro.init(2, layers, batch_size, train)) printf("Neuronal network created\n");
 	else return;
 	set_coefficient(coefficient);
 	_generator.seed((unsigned int)time(nullptr));
 	_last_save = clock();
+	_currect_message = (unsigned int)(train_part * _dialog->count());
 }
 
 bool mechan::Neuro::ok() const noexcept
@@ -222,7 +256,7 @@ float mechan::Neuro::get_coefficient() const noexcept
 
 void mechan::Neuro::set_coefficient(float coefficient) noexcept
 {
-	for (size_t i = 0; i < 3; i++) _neuro.coefficients(i) = coefficient;
+	for (size_t i = 0; i < 2; i++) _neuro.coefficients(i) = coefficient;
 }
 
 bool mechan::Neuro::save() noexcept
@@ -234,7 +268,7 @@ bool mechan::Neuro::save() noexcept
 
 bool mechan::Neuro::train() noexcept
 {
-	if (_currect_message < (unsigned int)(train_part * _dialog->count()))
+	if (_state == State::begin_training || _state == State::training)
 	{
 		if (!_train()) return false;
 		if (clock() - _last_save > interval * CLOCKS_PER_SEC)

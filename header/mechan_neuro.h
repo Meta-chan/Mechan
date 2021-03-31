@@ -14,8 +14,8 @@ namespace mechan
 	class Neuro
 	{
 	public:
-		static const size_t n_words = 10;
-		static const size_t n_chars = 10;
+		static const size_t n_words = 8;
+		static const size_t n_chars = 8;
 		static const size_t alphabet_size = 33;
 		static const size_t message_size = alphabet_size * n_chars * n_words + 3;
 		static const size_t batch_size = 1024;
@@ -26,14 +26,28 @@ namespace mechan
 		static const float deviance;
 
 	private:
+		enum class State
+		{
+			begin_testing,
+			train_testing,
+			test_testing,
+			begin_training,
+			training
+		};
+
 		neurog::Neuro _neuro;
 		Dialog *_dialog					= nullptr;
 		Word *_word						= nullptr;
 		unsigned int _currect_message	= 0;
 		unsigned int _currect_progress	= 0;
-		unsigned int _test_count		= 0;
-		unsigned int _match_count		= 0;
+		unsigned int _train_pair_count	= 0;
+		float _train_cost_count			= 0.0f;
+		unsigned int _train_guess_count	= 0;
+		unsigned int _test_pair_count	= 0;
+		float _test_cost_count			= 0.0f;
+		unsigned int _test_guess_count	= 0;
 		clock_t _last_save				= 0;
+		State _state					= State::begin_testing;
 		std::default_random_engine _generator;
 		std::uniform_int_distribution<unsigned int> _distribution;
 		ir::QuietVector<float> _input_buffer;
