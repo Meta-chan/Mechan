@@ -257,11 +257,11 @@ mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
 	if (!_output_buffer.resize(batch_size)) return;
 	if (!mathg::Default::init()) return;
 	if (!mathg::MathG::init()) return;
-	neurog::FullLayer::Info layer1(2 * message_size, 500, deviance);
-	neurog::FullLayer::Info layer2(500, 1, deviance);
+	neurog::FullLayer::Info layer1(2 * message_size, 500, deviance, coefficient);
+	neurog::FullLayer::Info layer2(500, 1, deviance, coefficient);
 	neurog::Layer::Info *layers[] = { &layer1, &layer2 };
-	if (_neuro.init("data/neuro", nullptr, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
-	else if (_neuro.init(2, layers, nullptr, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
+	if (_neuro.init("data/neuro", neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
+	else if (_neuro.init(2, layers, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
 	else return;
 	set_coefficient(coefficient);
 	_generator.seed((unsigned int)time(nullptr));
