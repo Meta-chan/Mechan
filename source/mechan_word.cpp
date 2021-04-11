@@ -5,7 +5,7 @@
 #include <ir/file.h>
 #include <assert.h>
 
-bool mechan::Word::MorphologyCharacteristics::get(MorphologyCharacteristic c) const noexcept
+bool mechan::MorphologyCharacteristics::get(MorphologyCharacteristic c) const noexcept
 {
 	unsigned int ic = (unsigned int)c;
 	if (ic >= 64) return _c & (1 << (ic - 64));
@@ -13,7 +13,7 @@ bool mechan::Word::MorphologyCharacteristics::get(MorphologyCharacteristic c) co
 	else return _a & (1 << ic);
 }
 
-void mechan::Word::MorphologyCharacteristics::set(MorphologyCharacteristic c, bool v) noexcept
+void mechan::MorphologyCharacteristics::set(MorphologyCharacteristic c, bool v) noexcept
 {
 	unsigned int ic = (unsigned int)c;
 	if (v)

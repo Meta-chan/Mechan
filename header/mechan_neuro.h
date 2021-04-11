@@ -14,10 +14,11 @@ namespace mechan
 	class Neuro
 	{
 	public:
-		static const size_t n_words = 8;
-		static const size_t n_chars = 8;
-		static const size_t alphabet_size = 33;
-		static const size_t message_size = alphabet_size * n_chars * n_words + 3;
+		static const size_t word_number = 7;
+		static const size_t char_number = 7;
+		static const size_t char_size = 33;
+		static const size_t word_size = char_size * char_number + MorphologyCharacteristics::number;
+		static const size_t message_size = word_size * word_number + 3;
 		static const size_t batch_size = 1024;
 		static const size_t interval = 3600;
 		static const float train_part;
@@ -53,11 +54,11 @@ namespace mechan
 		ir::QuietVector<float> _input_buffer;
 		ir::QuietVector<float> _output_buffer;
 
-		void _unroll_char(char c, float v[alphabet_size])										noexcept;
-		void _unroll_word(const std::string lowercase_word, float v[alphabet_size * n_chars])	noexcept;
-		void _unroll_message(const Parsed *message, float v[message_size])						noexcept;
-		bool _train()																			noexcept;
-		bool _test()																			noexcept;
+		void _unroll_char(char c, float v[char_size])							noexcept;
+		void _unroll_word(const std::string lowercase_word, float v[word_size])	noexcept;
+		void _unroll_message(const Parsed *message, float v[message_size])		noexcept;
+		bool _train()															noexcept;
+		bool _test()															noexcept;
 
 	public:
 		Neuro(Dialog *dialog, Word *word, bool train)									noexcept;

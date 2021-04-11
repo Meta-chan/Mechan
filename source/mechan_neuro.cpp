@@ -12,49 +12,75 @@
 const float mechan::Neuro::train_part = 0.7f;
 const float mechan::Neuro::test_part = 0.3f;
 const float mechan::Neuro::coefficient = 0.001f;
-const float mechan::Neuro::deviance = 0.01f;
+const float mechan::Neuro::deviance = 0.1f;
 
-void mechan::Neuro::_unroll_char(char c, float v[alphabet_size]) noexcept
+void mechan::Neuro::_unroll_char(char c, float v[char_size]) noexcept
 {
 	size_t nchar = is_cyrylic(c) ? ((unsigned char)c - (unsigned char)0xE0) : 32;
 	for (size_t i = 0; i < nchar; i++) v[i] = 0.0f;
 	v[nchar] = 1.0f;
-	for (size_t i = nchar + 1; i < alphabet_size; i++) v[i] = 0.0f;
+	for (size_t i = nchar + 1; i < char_size; i++) v[i] = 0.0f;
 }
 
-void mechan::Neuro::_unroll_word(const std::string word, float v[alphabet_size * n_chars]) noexcept
+void mechan::Neuro::_unroll_word(const std::string lowercase_word, float v[word_size]) noexcept
 {
-	if (word.size() > n_chars)
+	if (lowercase_word == "")
 	{
-		for (size_t i = 0; i < n_chars; i++)
-			_unroll_char(word[word.size() - n_chars + i], v + alphabet_size * i);
+		for (size_t i = 0; i < char_number; i++) _unroll_char(' ', v + char_size * i);
+		return;
+	}
+
+	//Unrolling letters
+	if (lowercase_word.size() > char_number)
+	{
+		for (size_t i = 0; i < char_number; i++)
+			_unroll_char(lowercase_word[lowercase_word.size() - char_number + i], v + char_size * i);
 	}
 	else
 	{
-		for (size_t i = 0; i < n_chars - word.size(); i++)
-			_unroll_char(' ', v + alphabet_size * i);
-		for (size_t i = 0; i < word.size(); i++)
-			_unroll_char(word[i], v + alphabet_size * (n_chars - word.size() + i));
+		for (size_t i = 0; i < char_number - lowercase_word.size(); i++)
+			_unroll_char(' ', v + char_size * i);
+		for (size_t i = 0; i < lowercase_word.size(); i++)
+			_unroll_char(lowercase_word[i], v + char_size * (char_number - lowercase_word.size() + i));
 	}
+
+	//Unrolling morphology characteristics
+	Word::WordInfo const * info;
+	unsigned int info_size;
+	if (_word->word_info(lowercase_word, &info, &info_size))
+	{
+		for (size_t i = 0; i < MorphologyCharacteristics::number; i++)
+		{
+			v[char_number  * char_size + i] = info->probable_characteristics.get((MorphologyCharacteristic)i) ? 1.0f : 0.0f;
+		}
+	}
+	else
+	{
+		for (size_t i = 0; i < MorphologyCharacteristics::number; i++)
+		{
+			v[char_number  * char_size + i] = 0.0f;
+		}
+	}
+
 }
 
 void mechan::Neuro::_unroll_message(const Parsed *message, float v[message_size]) noexcept
 {
-	if (message->words.size() > n_words)
+	if (message->words.size() > word_number)
 	{
-		for (size_t i = 0; i < n_words; i++)
-			_unroll_word(message->words[message->words.size() - n_words + i].lowercase, v + alphabet_size * n_chars * i);
+		for (size_t i = 0; i < word_number; i++)
+			_unroll_word(message->words[message->words.size() - word_number + i].lowercase, v + word_size * i);
 	}
 	else
 	{
-		for (size_t i = 0; i < n_words - message->words.size(); i++)
-			_unroll_word("", v + alphabet_size * n_chars * i);
+		for (size_t i = 0; i < word_number - message->words.size(); i++)
+			_unroll_word("", v + word_size * i);
 		for (size_t i = 0; i < message->words.size(); i++)
-			_unroll_word(message->words[i].lowercase, v + alphabet_size * n_chars * (n_words - message->words.size() + i));
+			_unroll_word(message->words[i].lowercase, v + word_size * (word_number - message->words.size() + i));
 	}
-	v[alphabet_size * n_words * n_chars] = (message->end == '.') ? 1.0f : 0.0f;
-	v[alphabet_size * n_words * n_chars + 1] = (message->end == '!') ? 1.0f : 0.0f;
-	v[alphabet_size * n_words * n_chars + 2] = (message->end == '?') ? 1.0f : 0.0f;
+	v[char_size * word_number * char_number] = (message->end == '.') ? 1.0f : 0.0f;
+	v[char_size * word_number * char_number + 1] = (message->end == '!') ? 1.0f : 0.0f;
+	v[char_size * word_number * char_number + 2] = (message->end == '?') ? 1.0f : 0.0f;
 }
 
 bool mechan::Neuro::_train() noexcept
@@ -185,8 +211,7 @@ bool mechan::Neuro::_test() noexcept
 	while (back_sample < sample)
 	{
 		//Couning statistics
-		float cost = (_output_buffer[back_sample] - 1.0f) * (_output_buffer[back_sample] - 1.0f);
-		cost += ((_output_buffer[back_sample + 1] - 0.0f) * (_output_buffer[back_sample + 1] - 0.0f));
+		float cost = _neuro.cost(_output_buffer[back_sample], 1.0f) + _neuro.cost(_output_buffer[back_sample + 1], 0.0f);
 		if (_state == State::train_testing)
 		{
 			_train_pair_count++;
@@ -235,8 +260,8 @@ mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
 	neurog::FullLayer::Info layer1(2 * message_size, 500, deviance);
 	neurog::FullLayer::Info layer2(500, 1, deviance);
 	neurog::Layer::Info *layers[] = { &layer1, &layer2 };
-	if (_neuro.init("data/neuro", batch_size, train)) printf("Neuronal network found\n");
-	else if (_neuro.init(2, layers, batch_size, train)) printf("Neuronal network created\n");
+	if (_neuro.init("data/neuro", nullptr, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
+	else if (_neuro.init(2, layers, nullptr, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
 	else return;
 	set_coefficient(coefficient);
 	_generator.seed((unsigned int)time(nullptr));
