@@ -14,17 +14,20 @@ namespace mechan
 	class Neuro
 	{
 	public:
-		static const size_t word_number = 7;
-		static const size_t char_number = 7;
-		static const size_t char_size = 33;
-		static const size_t word_size = char_size * char_number + MorphologyCharacteristics::number;
-		static const size_t message_size = word_size * word_number + 3;
-		static const size_t batch_size = 1024;
-		static const size_t interval = 3600;
-		static const float train_part;
-		static const float test_part;
-		static const float coefficient;
-		static const float deviance;
+		static int word_number;
+		static int char_number;
+		static int char_size;
+		static int interval;
+		static int batch_size;
+		static int layer2_size;
+		static int layer3_size;
+		static float train_part;
+		static float test_part;
+		static float coefficient;
+		static float deviance;
+
+		static int word_size;
+		static int message_size;
 
 	private:
 		enum class State
@@ -54,11 +57,11 @@ namespace mechan
 		ir::QuietVector<float> _input_buffer;
 		ir::QuietVector<float> _output_buffer;
 
-		void _unroll_char(char c, float v[char_size])							noexcept;
-		void _unroll_word(const std::string lowercase_word, float v[word_size])	noexcept;
-		void _unroll_message(const Parsed *message, float v[message_size])		noexcept;
-		bool _train()															noexcept;
-		bool _test()															noexcept;
+		void _unroll_char(char c, float *v)								noexcept;
+		void _unroll_word(const std::string lowercase_word, float *v)	noexcept;
+		void _unroll_message(const Parsed *message, float *v)			noexcept;
+		bool _train()													noexcept;
+		bool _test()													noexcept;
 
 	public:
 		Neuro(Dialog *dialog, Word *word, bool train)									noexcept;

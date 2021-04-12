@@ -12,7 +12,7 @@ Mechan is a telegram bot. Unlike most of bots, she doesn't use bot API \- instea
 
 ### Building
 1) Clone repository.
-2) Install [CMake](https://cmake.org)
+2) Install [CMake](https://cmake.org).
 3) Install [Ironic Library](https://github.com/Meta-chan/ironic_library).
 4) Install [NeuroG](https://github.com/Meta-chan/NeuroG).
 5) Install [tdlib](https://core.telegram.org/tdlib) to `td` subdirectory. Note that original instructions help to install `tdlib` to `td/tdlib`.
@@ -24,13 +24,23 @@ Note: I guarantee nothing. There might be problems with installation and usage o
 
 ### Configuration
 You can edit `mechan_config` to configure your own Mechan instance. Options are:
- - `FIRST_NAME` \- first name, relevant for `mechan_telegram_interface`
- - `SECOND_NAME` \- second name, relevant for `mechan_telegram_interface`
- - `PHONE` \- phone number, relevant for `mechan_telegram_interface`
- - `DEVICE` \- device model, relevant for `mechan_telegram_interface`
- - `PASSWORD` \- password to `tdlib` database, relevant for `mechan_telegram_interface`
  - `IP` \- IPv4 address of `mechan`, relevant to `mechan` and all interfaces
  - `PORT` \- TCP port of `mechan`, relevant to `mechan` and all interfaces
+ - `TELEGRAM_FIRST_NAME` \- first name, relevant for `mechan_telegram_interface`
+ - `TELEGRAM_SECOND_NAME` \- second name, relevant for `mechan_telegram_interface`
+ - `TELEGRAM_PHONE` \- phone number, relevant for `mechan_telegram_interface`
+ - `TELEGRAM_DEVICE` \- device model, relevant for `mechan_telegram_interface`
+ - `TELEGRAM_PASSWORD` \- password to `tdlib` database, relevant for `mechan_telegram_interface`
+ - `NEURO_WORD_NUMBER` \- Number of last words in sentence to pass to neural network (default is `7`), relevant to `mechan_trainer`
+ - `NEURO_CHAR_NUMBER` \- Number of last characters in word to pass to neural network (default is `7`), relevant to `mechan_trainer`
+ - `NEURO_BATCH_SIZE` \- Batch size (default is `1024`), relevant to `mechan_trainer`
+ - `NEURO_INTERVAL` \- Interval between saves in seconds (default is `3600`), relevant to `mechan_trainer`
+ - `NEURO_LAYER2` \- Size of second layer (default is `500`), relevant to `mechan_trainer`
+ - `NEURO_LAYER3` \- Size of third layer if not zero (default is `0`), relevant to `mechan_trainer`
+ - `NEURO_TRAIN_PART` \- Part of messages to be used in training (default is `0.7`), relevant to `mechan_trainer`
+ - `NEURO_TEST_PART` \- Part of messages to be used in testing (default is `0.3`), relevant to `mechan_trainer`
+ - `NEURO_COEFFICIENT` \- Training coefficient (default is `0.01`), relevant to `mechan_trainer`
+ - `NEURO_DEVIANCE` \- Standard deviance for initialization of weights (default is `0.1`), relevant to `mechan_trainer`
 
 ### Contact
 Contact original Mechan by [@halfdead_mechan](https://t.me/halfdead_mechan).

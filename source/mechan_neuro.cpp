@@ -4,17 +4,28 @@
 #include "../header/mechan_neuro.h"
 #include "../header/mechan_parse.h"
 #include "../header/mechan_character.h"
+#include "../header/mechan_config.h"
 #include <mathg/default.h>
 #include <time.h>
 #include <assert.h>
 #include <stdio.h>
 
-const float mechan::Neuro::train_part = 0.7f;
-const float mechan::Neuro::test_part = 0.3f;
-const float mechan::Neuro::coefficient = 0.001f;
-const float mechan::Neuro::deviance = 0.1f;
+int mechan::Neuro::word_number = 7;
+int mechan::Neuro::char_number = 7;
+int mechan::Neuro::char_size = 33;
+int mechan::Neuro::interval = 3600;
+int mechan::Neuro::batch_size = 1024;
+int mechan::Neuro::layer2_size = 500;
+int mechan::Neuro::layer3_size = 0;
+float mechan::Neuro::train_part = 0.7f;
+float mechan::Neuro::test_part = 0.3f;
+float mechan::Neuro::coefficient = 0.001f;
+float mechan::Neuro::deviance = 0.1f;
 
-void mechan::Neuro::_unroll_char(char c, float v[char_size]) noexcept
+int mechan::Neuro::word_size;
+int mechan::Neuro::message_size;
+
+void mechan::Neuro::_unroll_char(char c, float *v) noexcept
 {
 	size_t nchar = is_cyrylic(c) ? ((unsigned char)c - (unsigned char)0xE0) : 32;
 	for (size_t i = 0; i < nchar; i++) v[i] = 0.0f;
@@ -22,7 +33,7 @@ void mechan::Neuro::_unroll_char(char c, float v[char_size]) noexcept
 	for (size_t i = nchar + 1; i < char_size; i++) v[i] = 0.0f;
 }
 
-void mechan::Neuro::_unroll_word(const std::string lowercase_word, float v[word_size]) noexcept
+void mechan::Neuro::_unroll_word(const std::string lowercase_word, float *v) noexcept
 {
 	if (lowercase_word == "")
 	{
@@ -64,7 +75,7 @@ void mechan::Neuro::_unroll_word(const std::string lowercase_word, float v[word_
 
 }
 
-void mechan::Neuro::_unroll_message(const Parsed *message, float v[message_size]) noexcept
+void mechan::Neuro::_unroll_message(const Parsed *message, float *v) noexcept
 {
 	if (message->words.size() > word_number)
 	{
@@ -253,16 +264,50 @@ mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
 	_word(word),
 	_distribution(0, dialog->count() - 1)
 {
+	if (strtol(Config::value("NEURO_WORD_NUMBER").c_str(), nullptr, 10) > 0)
+		word_number = strtol(Config::value("NEURO_WORD_NUMBER").c_str(), nullptr, 10);
+	if (strtol(Config::value("NEURO_CHAR_NUMBER").c_str(), nullptr, 10) > 0)
+		char_number = strtol(Config::value("NEURO_CHAR_NUMBER").c_str(), nullptr, 10);
+	if (strtol(Config::value("NEURO_INTERVAL").c_str(), nullptr, 10) > 0)
+		interval = strtol(Config::value("NEURO_INTERVAL").c_str(), nullptr, 10);
+	if (strtol(Config::value("NEURO_BATCH_SIZE").c_str(), nullptr, 10) > 0)
+		batch_size = strtol(Config::value("NEURO_BATCH_SIZE").c_str(), nullptr, 10);
+	if (strtol(Config::value("NEURO_LAYER2").c_str(), nullptr, 10) > 0)
+		layer2_size = strtol(Config::value("NEURO_LAYER2").c_str(), nullptr, 10);
+	if (strtol(Config::value("NEURO_LAYER3").c_str(), nullptr, 10) >= 0)
+		layer3_size = strtol(Config::value("NEURO_LAYER3").c_str(), nullptr, 10);
+	if (strtof(Config::value("NEURO_TRAIN_PART").c_str(), nullptr) > 0.0f)
+		train_part = strtof(Config::value("NEURO_TRAIN_PART").c_str(), nullptr);
+	if (strtof(Config::value("NEURO_TEST_PART").c_str(), nullptr) > 0.0f)
+		test_part = strtof(Config::value("NEURO_TEST_PART").c_str(), nullptr);
+	if (strtof(Config::value("NEURO_COEFFICIENT").c_str(), nullptr) > 0.0f)
+		coefficient = strtof(Config::value("NEURO_COEFFICIENT").c_str(), nullptr);
+	if (strtof(Config::value("NEURO_DEVIANCE").c_str(), nullptr) > 0.0f)
+		deviance = strtof(Config::value("NEURO_DEVIANCE").c_str(), nullptr);
+	word_size = char_size * char_number + MorphologyCharacteristics::number;
+	message_size = word_size * word_number + 3;
+
 	if (!_input_buffer.resize(2 * message_size)) return;
 	if (!_output_buffer.resize(batch_size)) return;
 	if (!mathg::Default::init()) return;
 	if (!mathg::MathG::init()) return;
-	neurog::FullLayer::Info layer1(2 * message_size, 500, deviance, coefficient);
-	neurog::FullLayer::Info layer2(500, 1, deviance, coefficient);
-	neurog::Layer::Info *layers[] = { &layer1, &layer2 };
-	if (_neuro.init("data/neuro", neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
-	else if (_neuro.init(2, layers, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
-	else return;
+	neurog::FullLayer::Info layer1(2 * message_size, layer2_size, deviance, coefficient);
+	neurog::FullLayer::Info layer2(layer2_size, layer3_size == 0 ? 1 : layer3_size, deviance, coefficient);
+	if (layer3_size == 0)
+	{
+		neurog::Layer::Info *layers[] = { &layer1, &layer2 };
+		if (_neuro.init("data/neuro", neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
+		else if (_neuro.init(2, layers, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
+		else return;
+	}
+	else
+	{
+		neurog::FullLayer::Info layer3(layer3_size, 1, deviance, coefficient);
+		neurog::Layer::Info *layers[] = { &layer1, &layer2, &layer3 };
+		if (_neuro.init("data/neuro", neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
+		else if (_neuro.init(2, layers, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
+		else return;
+	}
 	set_coefficient(coefficient);
 	_generator.seed((unsigned int)time(nullptr));
 	_last_save = clock();

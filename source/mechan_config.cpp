@@ -76,6 +76,7 @@ void mechan::Config::_initialize() noexcept
 				if (!name.empty()) _config[name] = value;
 				name.clear();
 				value.clear();
+				state = State::endline_wait_name;
 			}
 			else value.push_back(c);
 			break;

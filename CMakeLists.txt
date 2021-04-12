@@ -30,6 +30,7 @@ target_link_libraries(mechan PRIVATE ${GLEW_DIR}/lib/Release/x64/glew32.lib)
 
 add_executable(mechan_trainer
 source/mechan_character.cpp
+source/mechan_config.cpp
 source/mechan_dialog.cpp
 source/mechan_ironic.cpp
 source/mechan_neuro.cpp
