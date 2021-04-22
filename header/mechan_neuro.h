@@ -19,6 +19,7 @@ namespace mechan
 		static int char_size;
 		static int interval;
 		static int batch_size;
+		static bool batch_correct;
 		static int layer2_size;
 		static int layer3_size;
 		static float train_part;

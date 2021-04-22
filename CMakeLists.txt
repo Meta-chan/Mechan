@@ -59,6 +59,7 @@ source/mechan_parse.cpp
 source/mechan_socket.cpp)
 target_include_directories(mechan_console_interface PRIVATE ${Ir_DIR}/include)
 
+set(Td_DIR ${Td_DIR}/lib/cmake/Td)
 find_package(Td 1.7.0)
 if(Td_FOUND)
 	set(CMAKE_TOOLCHAIN_FILE ${Vcpkg_DIR})

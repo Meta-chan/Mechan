@@ -34,6 +34,7 @@ You can edit `mechan_config` to configure your own Mechan instance. Options are:
  - `NEURO_WORD_NUMBER` \- Number of last words in sentence to pass to neural network (default is `7`), relevant to `mechan_trainer`
  - `NEURO_CHAR_NUMBER` \- Number of last characters in word to pass to neural network (default is `7`), relevant to `mechan_trainer`
  - `NEURO_BATCH_SIZE` \- Batch size (default is `1024`), relevant to `mechan_trainer`
+ - `NEURO_BATCH_CORRECT` \- Option to correct neuronal network after each batch (default is `true`)
  - `NEURO_INTERVAL` \- Interval between saves in seconds (default is `3600`), relevant to `mechan_trainer`
  - `NEURO_LAYER2` \- Size of second layer (default is `500`), relevant to `mechan_trainer`
  - `NEURO_LAYER3` \- Size of third layer if not zero (default is `0`), relevant to `mechan_trainer`

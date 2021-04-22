@@ -15,6 +15,7 @@ int mechan::Neuro::char_number = 7;
 int mechan::Neuro::char_size = 33;
 int mechan::Neuro::interval = 3600;
 int mechan::Neuro::batch_size = 1024;
+bool mechan::Neuro::batch_correct = true;
 int mechan::Neuro::layer2_size = 500;
 int mechan::Neuro::layer3_size = 0;
 float mechan::Neuro::train_part = 0.7f;
@@ -147,11 +148,12 @@ bool mechan::Neuro::_train() noexcept
 	_neuro.batch_size() = sample;
 	_neuro.forward();
 	_neuro.backward();
-	_neuro.correct();
+	if (batch_correct) _neuro.correct();
 
 	if (_currect_message >= (unsigned int)(train_part * _dialog->count()))
 	{
-		printf("\n");	
+		printf("\n");
+		if (!batch_correct) _neuro.correct();
 		_state = State::begin_testing;
 	}
 	return true;
@@ -272,6 +274,8 @@ mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
 		interval = strtol(Config::value("NEURO_INTERVAL").c_str(), nullptr, 10);
 	if (strtol(Config::value("NEURO_BATCH_SIZE").c_str(), nullptr, 10) > 0)
 		batch_size = strtol(Config::value("NEURO_BATCH_SIZE").c_str(), nullptr, 10);
+	if (Config::value("NEURO_BATCH_CORRECT") == "true" || Config::value("NEURO_BATCH_CORRECT") == "false")
+		batch_correct = Config::value("NEURO_BATCH_CORRECT") == "true";
 	if (strtol(Config::value("NEURO_LAYER2").c_str(), nullptr, 10) > 0)
 		layer2_size = strtol(Config::value("NEURO_LAYER2").c_str(), nullptr, 10);
 	if (strtol(Config::value("NEURO_LAYER3").c_str(), nullptr, 10) >= 0)
