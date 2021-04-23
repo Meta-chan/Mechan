@@ -90,9 +90,9 @@ void mechan::Neuro::_unroll_message(const Parsed *message, float *v) noexcept
 		for (size_t i = 0; i < message->words.size(); i++)
 			_unroll_word(message->words[i].lowercase, v + word_size * (word_number - message->words.size() + i));
 	}
-	v[char_size * word_number * char_number] = (message->end == '.') ? 1.0f : 0.0f;
-	v[char_size * word_number * char_number + 1] = (message->end == '!') ? 1.0f : 0.0f;
-	v[char_size * word_number * char_number + 2] = (message->end == '?') ? 1.0f : 0.0f;
+	v[word_size * word_number] = (message->end == '.') ? 1.0f : 0.0f;
+	v[word_size * word_number + 1] = (message->end == '!') ? 1.0f : 0.0f;
+	v[word_size * word_number + 2] = (message->end == '?') ? 1.0f : 0.0f;
 }
 
 bool mechan::Neuro::_train() noexcept
@@ -309,7 +309,7 @@ mechan::Neuro::Neuro(Dialog *dialog, Word *word, bool train) noexcept :
 		neurog::FullLayer::Info layer3(layer3_size, 1, deviance, coefficient);
 		neurog::Layer::Info *layers[] = { &layer1, &layer2, &layer3 };
 		if (_neuro.init("data/neuro", neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network found\n");
-		else if (_neuro.init(2, layers, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
+		else if (_neuro.init(3, layers, neurog::Cost::cross_entrophy, batch_size, train)) printf("Neuronal network created\n");
 		else return;
 	}
 	set_coefficient(coefficient);
